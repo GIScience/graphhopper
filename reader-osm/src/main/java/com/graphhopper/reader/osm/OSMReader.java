@@ -1,14 +1,14 @@
 /*
  *  Licensed to GraphHopper GmbH under one or more contributor
- *  license agreements. See the NOTICE file distributed with this work for 
+ *  license agreements. See the NOTICE file distributed with this work for
  *  additional information regarding copyright ownership.
- * 
- *  GraphHopper GmbH licenses this file to you under the Apache License, 
- *  Version 2.0 (the "License"); you may not use this file except in 
+ *
+ *  GraphHopper GmbH licenses this file to you under the Apache License,
+ *  Version 2.0 (the "License"); you may not use this file except in
  *  compliance with the License. You may obtain a copy of the License at
- * 
+ *
  *       http://www.apache.org/licenses/LICENSE-2.0
- * 
+ *
  *  Unless required by applicable law or agreed to in writing, software
  *  distributed under the License is distributed on an "AS IS" BASIS,
  *  WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -421,7 +421,7 @@ public class OSMReader implements DataReader {
     // ORS-GH MOD START
     //void processWay(ReaderWay way) {
     protected void processWay(ReaderWay way) {
-    // ORS-GH MOD END
+        // ORS-GH MOD END
         if (way.getNodes().size() < 2)
             return;
 
@@ -459,7 +459,7 @@ public class OSMReader implements DataReader {
             int crossingCount = 0;
             double totalDist = 0d;
             long nodeId = osmNodeIds.get(0);
-            int prev = getNodeMap().get(nodeId);
+            int first = getNodeMap().get(nodeId);
             long nodeExtraFlags = getNodeExtraFlagsMap().get(nodeId);
             if (nodeExtraFlags > 0) {
                 if((nodeExtraFlags|NODE_EXTRADATA_HAS_TRAFFIC_LIGHT) == NODE_EXTRADATA_HAS_TRAFFIC_LIGHT) {
@@ -470,9 +470,12 @@ public class OSMReader implements DataReader {
                 }
                 getNodeExtraFlagsMap().remove(nodeId);
             }
-            double prevLat = getTmpLatitude(prev), prevLon = getTmpLongitude(prev);
-            double latSum = prevLat;
-            double lonSum = prevLon;
+            double firstLat = getTmpLatitude(first);
+            double firstLon = getTmpLongitude(first);
+            double currLat = firstLat;
+            double currLon = firstLon;
+            double latSum = currLat;
+            double lonSum = currLon;
             int sumCount = 1;
             int len = osmNodeIds.size();
             for(int i=1; i<len; i++){
@@ -489,19 +492,26 @@ public class OSMReader implements DataReader {
                     getNodeExtraFlagsMap().remove(nextNodeId);
                 }
                 double nextLat = getTmpLatitude(next), nextLon = getTmpLongitude(next);
-                if(!Double.isNaN(prevLat) && !Double.isNaN(prevLon) && !Double.isNaN(nextLat) && !Double.isNaN(nextLon)) {
+                if(!Double.isNaN(currLat) && !Double.isNaN(currLon) && !Double.isNaN(nextLat) && !Double.isNaN(nextLon)) {
                     latSum = latSum + nextLat;
                     lonSum = lonSum + nextLon;
                     sumCount++;
-                    totalDist = totalDist + distCalc.calcDist(prevLat, prevLon, nextLat, nextLon);
+                    totalDist = totalDist + distCalc.calcDist(currLat, currLon, nextLat, nextLon);
 
-                    prevLat = nextLat;
-                    prevLon = nextLon;
+                    currLat = nextLat;
+                    currLon = nextLon;
                 }
             }
+            // make the simple dist & center calculations (who ever rely on it might want to use it!)
+            if (!Double.isNaN(firstLat) && !Double.isNaN(firstLon) && !Double.isNaN(currLat) && !Double.isNaN(currLon)) {
+                double estimatedDist = distCalc.calcDist(firstLat, firstLon, currLat, currLon);
+                // Add artificial tag for the estimated distance and center
+                way.setTag("estimated_distance", estimatedDist);
+                way.setTag("estimated_center", new GHPoint((firstLat + currLat) / 2, (firstLon + currLon) / 2));
+            }
             if(totalDist > 0) {
-                way.setTag("estimated_distance", totalDist);
-                way.setTag("estimated_center", new GHPoint(latSum / sumCount, lonSum / sumCount));
+                way.setTag("exact_distance", totalDist);
+                way.setTag("exact_center", new GHPoint(latSum / sumCount, lonSum / sumCount));
             }
             if(trafficLightCount > 0){
                 way.setTag("traffic_light_count", trafficLightCount);
@@ -546,7 +556,7 @@ public class OSMReader implements DataReader {
                         if (lastBarrier < 0)
                             lastBarrier = 0;
 
-                        // add way up to barrier shadow node                        
+                        // add way up to barrier shadow node
                         int length = i - lastBarrier + 1;
                         LongArrayList partNodeIds = new LongArrayList();
                         partNodeIds.add(osmNodeIds.buffer, lastBarrier, length);
@@ -578,10 +588,10 @@ public class OSMReader implements DataReader {
         } else {
             // ORS-GH MOD START
             if (!onCreateEdges(way, osmNodeIds, wayFlags, createdEdges)) {
-            // ORS-GH MOD END
+                // ORS-GH MOD END
                 // no barriers - simply add the whole way
                 createdEdges.addAll(addOSMWay(way.getNodes(), wayFlags, wayOsmId));
-            // ORS-GH MOD START
+                // ORS-GH MOD START
             }
             // ORS-GH MOD END
         }
@@ -748,7 +758,7 @@ public class OSMReader implements DataReader {
         } else if (nodeType == PILLAR_NODE) {
             pillarInfo.setNode(nextPillarId, lat, lon, ele);
             // MAQR24 MOD START
-            java.util.Iterator<Map.Entry<String, Object>> it = node.getTags().entrySet().iterator();
+            Iterator<Map.Entry<String, Object>> it = node.getTags().entrySet().iterator();
             Map<String, Object> temp = new HashMap<>();
             while (it.hasNext()) {
                 Map.Entry<String, Object> pairs = it.next();
@@ -917,14 +927,14 @@ public class OSMReader implements DataReader {
                 if (!distCalc.isCrossBoundary(lon, prevLon))
                     // ORS-GH MOD START
                     if(calcDistance3D) {
-                    // ORS-GH MOD END
-                    towerNodeDistance += distCalc3D.calcDist(prevLat, prevLon, prevEle, lat, lon, ele);
-                    // ORS-GH MOD START
+                        // ORS-GH MOD END
+                        towerNodeDistance += distCalc3D.calcDist(prevLat, prevLon, prevEle, lat, lon, ele);
+                        // ORS-GH MOD START
                     } else {
-                    // ORS-GH MOD START
+                        // ORS-GH MOD START
                         towerNodeDistance += distCalc.calcDist(prevLat, prevLon, lat, lon);
                     }
-                    // ORS-GH MOD END
+                // ORS-GH MOD END
                 prevEle = ele;
             } else if (!distCalc.isCrossBoundary(lon, prevLon))
                 towerNodeDistance += distCalc.calcDist(prevLat, prevLon, lat, lon);
@@ -939,7 +949,7 @@ public class OSMReader implements DataReader {
             }
         }
         if (towerNodeDistance < 0.0001) {
-            // As investigation shows often two paths should have crossed via one identical point 
+            // As investigation shows often two paths should have crossed via one identical point
             // but end up in two very close points.
             zeroCounter++;
             towerNodeDistance = 0.0001;
@@ -952,7 +962,7 @@ public class OSMReader implements DataReader {
         }
 
         if (Double.isInfinite(towerNodeDistance) || towerNodeDistance > maxDistance) {
-            // Too large is very rare and often the wrong tagging. See #435 
+            // Too large is very rare and often the wrong tagging. See #435
             // so we can avoid the complexity of splitting the way for now (new towernodes would be required, splitting up geometry etc)
             LOGGER.warn("Bug in OSM or GraphHopper. Too big tower node distance " + towerNodeDistance + " reset to large value, osm way " + wayOsmId);
             towerNodeDistance = maxDistance;
@@ -1115,7 +1125,7 @@ public class OSMReader implements DataReader {
     // ORS-GH MOD START
     //boolean isInBounds(ReaderNode node) {
     protected boolean isInBounds(ReaderNode node) {
-    // ORS-GH MOD END
+        // ORS-GH MOD END
         return true;
     }
 
@@ -1125,7 +1135,7 @@ public class OSMReader implements DataReader {
     // ORS-GH MOD START
     //protected LongIntMap getNodeMap() {
     public LongIntMap getNodeMap() {
-    // ORS-GH MOD END
+        // ORS-GH MOD END
         return osmNodeIdToInternalNodeMap;
     }
 
