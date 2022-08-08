@@ -16,7 +16,7 @@
  *  limitations under the License.
  */
 
-package com.graphhopper.routing;
+package com.graphhopper.http;
 
 import com.graphhopper.config.CHProfile;
 import com.graphhopper.config.LMProfile;
@@ -40,13 +40,13 @@ import static com.graphhopper.routing.weighting.Weighting.INFINITE_U_TURN_COSTS;
  * Note that this class is meant to be only used for the top-most web layer, while the GH engine should only deal with
  * the profile parameter.
  */
-public class ProfileResolver {
+public class LegacyProfileResolver {
     private final EncodingManager encodingManager;
     private final List<Profile> profiles;
     private final List<Profile> chProfiles;
     private final List<Profile> lmProfiles;
 
-    public ProfileResolver(EncodingManager encodingManager, List<Profile> profiles, List<CHProfile> chProfiles, List<LMProfile> lmProfiles) {
+    public LegacyProfileResolver(EncodingManager encodingManager, List<Profile> profiles, List<CHProfile> chProfiles, List<LMProfile> lmProfiles) {
         this.encodingManager = encodingManager;
         this.profiles = profiles;
         Map<String, Profile> profilesByName = new HashMap<>(profiles.size());
@@ -79,11 +79,14 @@ public class ProfileResolver {
         boolean disableLM = hints.getBool(Parameters.Landmark.DISABLE, false);
 
         String vehicle = hints.getString("vehicle", "").toLowerCase();
-        if (!vehicle.isEmpty() && !encodingManager.hasEncoder(vehicle))
-            throw new IllegalArgumentException("Vehicle not supported: `" + vehicle + "`. Supported are: `" + encodingManager.toString() +
-                    "`\nYou should consider using the `profile` parameter instead of specifying a vehicle." +
-                    "\nAvailable profiles: " + getProfileNames() +
-                    "\nTo learn more about profiles, see: docs/core/profiles.md");
+        if (!vehicle.isEmpty()) {
+            List<String> availableVehicles = encodingManager.getVehicles();
+            if (!availableVehicles.contains(vehicle))
+                throw new IllegalArgumentException("Vehicle not supported: `" + vehicle + "`. Supported are: `" + String.join(",", availableVehicles) +
+                        "`\nYou should consider using the `profile` parameter instead of specifying a vehicle." +
+                        "\nAvailable profiles: " + getProfileNames() +
+                        "\nTo learn more about profiles, see: docs/core/profiles.md");
+        }
 
         // we select the profile based on the given request hints and the available profiles
         if (!chProfiles.isEmpty() && !disableCH) {

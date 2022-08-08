@@ -16,15 +16,16 @@
  *  limitations under the License.
  */
 
-package com.graphhopper.routing.ch;
+package com.graphhopper.http;
 
 import com.graphhopper.config.CHProfile;
 import com.graphhopper.config.LMProfile;
 import com.graphhopper.config.Profile;
-import com.graphhopper.routing.ProfileResolver;
+import com.graphhopper.routing.ev.BooleanEncodedValue;
+import com.graphhopper.routing.ev.DecimalEncodedValue;
+import com.graphhopper.routing.ev.VehicleAccess;
+import com.graphhopper.routing.ev.VehicleSpeed;
 import com.graphhopper.routing.util.EncodingManager;
-import com.graphhopper.routing.util.FlagEncoder;
-import com.graphhopper.routing.util.FlagEncoders;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.Parameters;
 import org.junit.jupiter.api.BeforeEach;
@@ -37,7 +38,7 @@ import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public class CHProfileSelectorTest {
+public class CHLegacyProfileSelectorTest {
 
     private static final String MULTIPLE_MATCHES_ERROR = "There are multiple CH profiles matching your request. Use the `weighting`,`vehicle`,`turn_costs` and/or `u_turn_costs` parameters to be more specific";
     private static final String NO_MATCH_ERROR = "Cannot find matching profile that supports CH for your request";
@@ -55,9 +56,14 @@ public class CHProfileSelectorTest {
 
     @BeforeEach
     public void setup() {
-        FlagEncoder carEncoder = FlagEncoders.createCar();
-        FlagEncoder bikeEncoder = FlagEncoders.createBike();
-        encodingManager = EncodingManager.create(carEncoder, bikeEncoder);
+        BooleanEncodedValue carAccessEnc = VehicleAccess.create("car");
+        DecimalEncodedValue carSpeedEnc = VehicleSpeed.create("car", 5, 5, false);
+        BooleanEncodedValue bikeAccessEnc = VehicleAccess.create("bike");
+        DecimalEncodedValue bikeSpeedEnc = VehicleSpeed.create("bike", 4, 2, false);
+        encodingManager = EncodingManager.start()
+                .add(carAccessEnc).add(carSpeedEnc)
+                .add(bikeAccessEnc).add(bikeSpeedEnc)
+                .build();
         fastCar = new Profile("fast_car").setWeighting("fastest").setVehicle("car").setTurnCosts(false);
         fastCarEdge = new Profile("fast_car_edge").setWeighting("fastest").setVehicle("car").setTurnCosts(true);
         fastCarEdge10 = new Profile("fast_car_edge10").setWeighting("fastest").setVehicle("car").setTurnCosts(true).putHint(Parameters.Routing.U_TURN_COSTS, 10);
@@ -262,7 +268,7 @@ public class CHProfileSelectorTest {
     private void assertProfileFound(Profile expectedProfile, List<Profile> profiles, List<CHProfile> chProfiles, String vehicle, String weighting, Boolean edgeBased, Integer uTurnCosts) {
         PMap hintsMap = createHintsMap(vehicle, weighting, edgeBased, uTurnCosts);
         try {
-            Profile selectedProfile = new ProfileResolver(encodingManager, profiles, chProfiles, Collections.<LMProfile>emptyList()).selectProfileCH(hintsMap);
+            Profile selectedProfile = new LegacyProfileResolver(encodingManager, profiles, chProfiles, Collections.<LMProfile>emptyList()).selectProfileCH(hintsMap);
             assertEquals(expectedProfile, selectedProfile);
         } catch (IllegalArgumentException e) {
             fail("no profile found\nexpected: " + expectedProfile + "\nerror: " + e.getMessage());
@@ -276,7 +282,7 @@ public class CHProfileSelectorTest {
     private String assertCHProfileSelectionError(String expectedError, List<Profile> profiles, List<CHProfile> chProfiles, String vehicle, String weighting, Boolean edgeBased, Integer uTurnCosts) {
         PMap hintsMap = createHintsMap(vehicle, weighting, edgeBased, uTurnCosts);
         try {
-            new ProfileResolver(encodingManager, profiles, chProfiles, Collections.<LMProfile>emptyList()).selectProfileCH(hintsMap);
+            new LegacyProfileResolver(encodingManager, profiles, chProfiles, Collections.<LMProfile>emptyList()).selectProfileCH(hintsMap);
             fail("There should have been an error");
             return "";
         } catch (IllegalArgumentException e) {

@@ -53,6 +53,9 @@ public class DecimalEncodedValueImplTest {
         DecimalEncodedValueImpl testEnc = new DecimalEncodedValueImpl("test", 3, -6, 0.1, false, false, false, true);
         testEnc.init(new EncodedValue.InitializerConfig());
         IntsRef intsRef = new IntsRef(1);
+        // a bit ugly: the default is the minimum not 0
+        assertEquals(-6, testEnc.getDecimal(false, intsRef), .1);
+
         testEnc.setDecimal(false, intsRef, -5.5);
         assertEquals(-5.5, testEnc.getDecimal(false, intsRef), .1);
         assertEquals(-5.5, testEnc.getDecimal(true, intsRef), .1);
@@ -80,6 +83,16 @@ public class DecimalEncodedValueImplTest {
         testEnc.setDecimal(false, intsRef, 5.5);
         assertEquals(5.5, testEnc.getDecimal(false, intsRef), .1);
         assertEquals(-5.5, testEnc.getDecimal(true, intsRef), .1);
+
+        EncodedValue.InitializerConfig config = new EncodedValue.InitializerConfig();
+        new DecimalEncodedValueImpl("tmp1", 5, 1, false, false).init(config);
+        testEnc = new DecimalEncodedValueImpl("tmp2", 5, 0, 1, false,
+                true, false, false);
+        testEnc.init(config);
+        intsRef = new IntsRef(1);
+        testEnc.setDecimal(false, intsRef, 2.6);
+        assertEquals(3, testEnc.getDecimal(false, intsRef), .1);
+        assertEquals(-3, testEnc.getDecimal(true, intsRef), .1);
     }
 
     @Test
