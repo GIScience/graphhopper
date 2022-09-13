@@ -51,6 +51,7 @@ Here is an overview:
  * PGWelch, shapefile reader #874
  * rajanski, script to do routing via PostGIS
  * ratrun, route relations, GPX information, bike handling etc
+ * Robot8A, AbstractFlagEncoder.isPermittedWayConditionallyRestricted()
  * rodneyodonnell, improved dead end removal (PrepareRoutingSubnetworks) and fords
  * rodo, more descriptions
  * seeebiii, motorcycle improvements
