@@ -17,8 +17,10 @@
  */
 package com.graphhopper.routing;
 
+import com.carrotsearch.hppc.DoubleArrayList;
 import com.carrotsearch.hppc.IntArrayList;
 import com.carrotsearch.hppc.IntIndexedContainer;
+import com.carrotsearch.hppc.LongArrayList;
 import com.graphhopper.coll.GHLongArrayList;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.NodeAccess;
@@ -49,6 +51,7 @@ public class Path {
     private long time;
     // ORS-GH MOD START: new field
     protected GHLongArrayList times = new GHLongArrayList();
+    protected DoubleArrayList weights = new DoubleArrayList();
     // ORS-GH MOD END
     private IntArrayList edgeIds = new IntArrayList();
     private int fromNode = -1;

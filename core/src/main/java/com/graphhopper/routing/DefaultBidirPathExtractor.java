@@ -67,6 +67,8 @@ public class DefaultBidirPathExtractor implements BidirPathExtractor {
         onFwdTreeRoot(fwdRoot.adjNode);
         // since we followed the fwd path in backward direction we need to reverse the edge ids
         ArrayUtil.reverse(path.getEdges());
+        ArrayUtil.reverse(path.times);
+        ArrayUtil.reverse(path.weights);
     }
 
     protected void extractBwdPath(SPTEntry sptEntry) {
@@ -85,6 +87,7 @@ public class DefaultBidirPathExtractor implements BidirPathExtractor {
         SPTEntry parentEntry = currEntry.parent;
         while (EdgeIterator.Edge.isValid(currEntry.edge)) {
             onEdge(currEntry.edge, currEntry.adjNode, reverse, getIncEdge(parentEntry));
+            path.weights.add(currEntry.weight);
             currEntry = parentEntry;
             parentEntry = currEntry.parent;
         }
