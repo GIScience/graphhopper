@@ -59,15 +59,16 @@
     <modules>
         <module>core</module>
         <module>reader-gtfs</module>
-        <module>tools</module>
+        <!-- ORS-GH MOD<module>tools</module> -->
         <module>hmm-lib</module>
         <module>map-matching</module>
-        <module>web-bundle</module>
+        <!-- ORS-GH MOD<module>web-bundle</module> -->
         <module>web-api</module>
-        <module>web</module>
+        <!-- ORS-GH MOD<module>web</module> -->
         <module>client-hc</module>
-        <module>navigation</module>
-        <module>example</module>
+        <!-- ORS-GH MOD<module>navigation</module> -->
+        <!-- ORS-GH MOD<module>example</module> -->
+        <!-- ORS-GH MOD END -->
     </modules>
     <dependencyManagement>
         <dependencies>
