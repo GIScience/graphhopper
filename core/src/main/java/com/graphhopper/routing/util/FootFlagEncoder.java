@@ -49,10 +49,10 @@ public class FootFlagEncoder extends AbstractFlagEncoder {
     final Set<String> allowedSacScale = new HashSet<>();
     protected HashSet<String> sidewalkValues = new HashSet<>(5);
     protected HashSet<String> sidewalksNoValues = new HashSet<>(5);
-    protected final boolean speedTwoDirections;
+    protected boolean speedTwoDirections;
     protected DecimalEncodedValue priorityWayEncoder;
     protected EnumEncodedValue<RouteNetwork> footRouteEnc;
-    protected Map<RouteNetwork, Integer> routeMap = new HashMap<>();
+    Map<RouteNetwork, Integer> routeMap = new HashMap<>();
 
     public FootFlagEncoder() {
         this(4, 1, false);

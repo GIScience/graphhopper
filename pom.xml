@@ -57,6 +57,7 @@
     </issueManagement>
 
     <modules>
+        <!-- ORS-GH MOD START - remove unused modules -->
         <module>core</module>
         <module>reader-gtfs</module>
         <!-- ORS-GH MOD<module>tools</module> -->

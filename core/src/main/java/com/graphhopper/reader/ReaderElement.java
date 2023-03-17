@@ -46,6 +46,18 @@ public abstract class ReaderElement {
         this.properties = properties;
     }
 
+    // ORS-GH MOD START
+    // Modification by Maxim Rylov: A new method has been added.
+    public boolean hasTag(String key) {
+        return properties.containsKey(key);
+    }
+
+    // Modification by Maxim Rylov: A new method has been added.
+    public Iterator<Entry<String, Object>> getProperties() {
+        return properties.entrySet().iterator();
+    }
+    // ORS-GH MOD END
+
     public long getId() {
         return id;
     }
@@ -83,6 +95,19 @@ public abstract class ReaderElement {
     public String getTag(String name) {
         return (String) properties.get(name);
     }
+
+    // ORS-GH MOD START - account for enumerations of multiple values
+    public String [] getTagValues(String name) {
+        String tagValue = getTag(name);
+        if (tagValue==null)
+            return new String[0];
+
+        String [] tagValues = {tagValue};
+        if (tagValue.contains(";"))
+            tagValues = tagValue.split(";");
+        return tagValues;
+    }
+    // ORS-GH MOD END
 
     @SuppressWarnings("unchecked")
     public <T> T getTag(String key, T defaultValue) {
@@ -137,7 +162,14 @@ public abstract class ReaderElement {
      * Check that a given tag has one of the specified values.
      */
     public final boolean hasTag(String key, Collection<String> values) {
-        return values.contains(getTag(key, ""));
+        // ORS-GH MOD START - account for enumerations of multiple values
+        String [] tagValues = getTagValues(key);
+        for (String tagValue: tagValues) {
+            if (values.contains(tagValue))
+                return true;
+        }
+        return false;
+        // ORS-GH MOD END
     }
 
     /**
@@ -146,7 +178,10 @@ public abstract class ReaderElement {
      */
     public boolean hasTag(List<String> keyList, Collection<String> values) {
         for (String key : keyList) {
-            if (values.contains(getTag(key, "")))
+            // ORS-GH MOD START
+            //if (values.contains(getTag(key, "")))
+            if (hasTag(key, values))
+            // ORS-GH MOD END
                 return true;
         }
         return false;
@@ -171,6 +206,17 @@ public abstract class ReaderElement {
         }
         return "";
     }
+
+    // ORS-GH MOD START - account for enumerations of multiple values
+    public String [] getFirstPriorityTagValues(List<String> restrictions) {
+        String [] empty = {};
+        for (String str : restrictions) {
+            if (hasTag(str))
+                return getTagValues(str);
+        }
+        return empty;
+    }
+    // ORS-GH MOD END
 
     public void removeTag(String name) {
         properties.remove(name);

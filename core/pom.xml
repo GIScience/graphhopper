@@ -70,6 +70,19 @@
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
+        <dependency>
+            <groupId>ch.poole</groupId>
+            <artifactId>ConditionalRestrictionParser</artifactId>
+            <!-- TODO ORS: where is this defined? <version>${crparser.version}</version> -->
+            <version>0.3.1</version>
+        </dependency>
+        <dependency>
+            <groupId>ch.poole</groupId>
+            <artifactId>OpeningHoursParser</artifactId>
+            <!-- TODO ORS: where is this defined? <version>${ohparser.version}</version> -->
+            <version>0.25.0</version>
+        </dependency>
+
         <!-- for using CGIAR: elevation data importing via tif files-->
         <dependency>
             <groupId>org.apache.xmlgraphics</groupId>
@@ -95,6 +108,17 @@
             <groupId>ch.qos.logback</groupId>
             <artifactId>logback-classic</artifactId>
             <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.dropwizard</groupId>
+            <artifactId>dropwizard-jersey</artifactId>
+            <version>2.0.21</version>
+            <scope>compile</scope>
+        </dependency>
+        <dependency>
+            <groupId>us.dustinj.timezonemap</groupId>
+            <artifactId>timezonemap</artifactId>
+            <version>4.5</version>
         </dependency>
     </dependencies>
 

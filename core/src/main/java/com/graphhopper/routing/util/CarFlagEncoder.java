@@ -18,6 +18,10 @@
 package com.graphhopper.routing.util;
 
 import com.graphhopper.reader.ReaderWay;
+import com.graphhopper.reader.osm.conditional.ConditionalOSMSpeedInspector;
+import com.graphhopper.reader.osm.conditional.ConditionalParser;
+import com.graphhopper.reader.osm.conditional.DateRangeParser;
+import com.graphhopper.routing.ev.BooleanEncodedValue;
 import com.graphhopper.routing.ev.DecimalEncodedValueImpl;
 import com.graphhopper.routing.ev.EncodedValue;
 import com.graphhopper.storage.IntsRef;
@@ -31,6 +35,7 @@ import java.util.*;
  *
  * @author Peter Karich
  * @author Nop
+ * @author Andrzej Oles
  */
 public class CarFlagEncoder extends AbstractFlagEncoder {
     protected final Map<String, Integer> trackTypeSpeedMap = new HashMap<>();
@@ -45,6 +50,11 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
      * http://wiki.openstreetmap.org/wiki/OSM_tags_for_routing/Maxspeed
      */
     protected final Map<String, Integer> defaultSpeedMap = new HashMap<>();
+
+    // ORS-GH MOD START - new fields
+    private BooleanEncodedValue conditionalEncoder;
+    private BooleanEncodedValue conditionalSpeedEncoder;
+    // ORS-GH MOD END
 
     public CarFlagEncoder() {
         this(new PMap());
@@ -147,6 +157,18 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
         return TransportationMode.CAR;
     }
 
+    // ORS-GH MOD START - override parent
+    // TODO ORS (minor): provide a reason for this modification
+    //           Don't other profiles also need conditionals?
+    @Override
+    protected void init(DateRangeParser dateRangeParser) {
+        super.init(dateRangeParser);
+        ConditionalOSMSpeedInspector conditionalOSMSpeedInspector = new ConditionalOSMSpeedInspector(Arrays.asList("maxspeed"));
+        conditionalOSMSpeedInspector.addValueParser(ConditionalParser.createDateTimeParser());
+        setConditionalSpeedInspector(conditionalOSMSpeedInspector);
+    }
+    // ORS-GH MOD END
+
     /**
      * Define the place of the speedBits in the edge flags for car.
      */
@@ -155,6 +177,10 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
         // first two bits are reserved for route handling in superclass
         super.createEncodedValues(registerNewEncodedValue);
         registerNewEncodedValue.add(avgSpeedEnc);
+        // ORS-GH MOD START - additional encoders for conditionals
+        registerNewEncodedValue.add(conditionalEncoder);
+        registerNewEncodedValue.add(conditionalSpeedEncoder);
+        // ORS-GH MOD END
     }
 
     protected double getSpeed(ReaderWay way) {
@@ -213,7 +239,7 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
                 return EncodingManager.Access.WAY;
         }
 
-        // do not drive street cars into fords
+        // do not drive street  cars into fords
         if (isBlockFords() && ("ford".equals(highwayValue) || way.hasTag("ford")))
             return EncodingManager.Access.CAN_SKIP;
 
@@ -234,22 +260,39 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
             double speed = getSpeed(way);
             speed = applyMaxSpeed(way, speed);
 
+            // ORS-GH MOD START- new code
+            // TODO: save conditional speeds only if their value is different from the default speed
+            if (getConditionalSpeedInspector().hasConditionalSpeed(way))
+                if (getConditionalSpeedInspector().hasLazyEvaluatedConditions())
+                    conditionalSpeedEncoder.setBool(false, edgeFlags, true);
+                else
+                    // conditional maxspeed overrides unconditional one
+                    speed = applyConditionalSpeed(getConditionalSpeedInspector().getTagValue(), speed);
+            // ORS-GH MOD END
             speed = applyBadSurfaceSpeed(way, speed);
 
             setSpeed(false, edgeFlags, speed);
             if (speedTwoDirections)
                 setSpeed(true, edgeFlags, speed);
 
+            // ORS-GH MOD START - modify accept from 'true' to 'access'
+            boolean accept = !access.isRestricted();
             boolean isRoundabout = roundaboutEnc.getBool(false, edgeFlags);
             if (isOneway(way) || isRoundabout) {
                 if (isForwardOneway(way))
-                    accessEnc.setBool(false, edgeFlags, true);
+                    accessEnc.setBool(false, edgeFlags, accept);
                 if (isBackwardOneway(way))
-                    accessEnc.setBool(true, edgeFlags, true);
+                    accessEnc.setBool(true, edgeFlags, accept);
             } else {
-                accessEnc.setBool(false, edgeFlags, true);
-                accessEnc.setBool(true, edgeFlags, true);
+                accessEnc.setBool(false, edgeFlags, accept);
+                accessEnc.setBool(true, edgeFlags, accept);
             }
+            // ORS-GH MOD END
+
+            // ORS-GH MOD START -- additional code
+            if (access.isConditional())
+                conditionalEncoder.setBool(false, edgeFlags, true);
+            // ORS-GH MOD END
 
         } else {
             double ferrySpeed = ferrySpeedCalc.getSpeed(way);
@@ -262,6 +305,14 @@ public class CarFlagEncoder extends AbstractFlagEncoder {
 
         return edgeFlags;
     }
+
+    // ORS-GH MOD START - new method
+    public final BooleanEncodedValue getConditionalEnc() {
+        if (conditionalEncoder == null)
+            throw new NullPointerException("FlagEncoder " + toString() + " not yet initialized");
+        return conditionalEncoder;
+    }
+    // ORS-GH MOD END
 
     /**
      * @param way   needed to retrieve tags

@@ -21,6 +21,7 @@ import com.graphhopper.ResponsePath;
 import com.graphhopper.routing.InstructionsFromEdges;
 import com.graphhopper.routing.Path;
 import com.graphhopper.routing.ev.EncodedValueLookup;
+import com.graphhopper.routing.util.PathProcessor;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.util.details.PathDetailsBuilderFactory;
@@ -89,6 +90,12 @@ public class PathMerger {
     }
 
     public ResponsePath doWork(PointList waypoints, List<Path> paths, EncodedValueLookup evLookup, Translation tr) {
+        // ORS-GH MOD - change signature to pass PathProcessor
+        return doWork(waypoints, paths, evLookup, tr,  PathProcessor.DEFAULT);
+    }
+
+    public ResponsePath doWork(PointList waypoints, List<Path> paths, EncodedValueLookup evLookup, Translation tr, PathProcessor pathProcessor) {
+        // ORS-GH MOD END
         ResponsePath responsePath = new ResponsePath();
         int origPoints = 0;
         long fullTimeInMillis = 0;
@@ -110,7 +117,11 @@ public class PathMerger {
             fullDistance += path.getDistance();
             fullWeight += path.getWeight();
             if (enableInstructions) {
-                InstructionList il = InstructionsFromEdges.calcInstructions(path, graph, weighting, evLookup, tr);
+                // ORS-GH MOD START
+                // TODO ORS (major refactoring): integrate or re-implement pathprocessor
+                // InstructionList il = InstructionsFromEdges.calcInstructions(path, graph, weighting, evLookup, tr);
+                InstructionList il = InstructionsFromEdges.calcInstructions(path, graph, weighting, evLookup, tr, pathProcessor);
+                // ORS-GH MOD END
 
                 if (!il.isEmpty()) {
                     fullInstructions.addAll(il);
@@ -143,6 +154,9 @@ public class PathMerger {
         }
 
         if (!fullPoints.isEmpty()) {
+            // ORS-GH MOD START
+            fullPoints = pathProcessor.processPoints(fullPoints);
+            // ORS-GH MOD END
             responsePath.addDebugInfo("simplify (" + origPoints + "->" + fullPoints.size() + ")");
             if (fullPoints.is3D)
                 calcAscendDescend(responsePath, fullPoints);

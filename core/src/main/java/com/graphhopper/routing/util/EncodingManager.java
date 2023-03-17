@@ -18,11 +18,13 @@
 package com.graphhopper.routing.util;
 
 import com.graphhopper.reader.OSMTurnRelation;
+import com.graphhopper.reader.ReaderNode;
 import com.graphhopper.reader.ReaderRelation;
 import com.graphhopper.reader.ReaderWay;
 import com.graphhopper.reader.osm.conditional.DateRangeParser;
 import com.graphhopper.routing.ev.*;
 import com.graphhopper.routing.util.parsers.*;
+import com.graphhopper.storage.ConditionalEdges;
 import com.graphhopper.storage.Graph;
 import com.graphhopper.storage.IntsRef;
 import com.graphhopper.storage.StorableProperties;
@@ -30,6 +32,7 @@ import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.PMap;
 
 import java.util.*;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 
 import static com.graphhopper.util.Helper.toLowerCase;
@@ -43,6 +46,7 @@ import static java.util.Collections.emptyMap;
  *
  * @author Peter Karich
  * @author Nop
+ * @author Andrzej Oles
  */
 public class EncodingManager implements EncodedValueLookup {
     private final List<AbstractFlagEncoder> edgeEncoders = new ArrayList<>();
@@ -430,7 +434,7 @@ public class EncodingManager implements EncodedValueLookup {
     }
 
     public enum Access {
-        WAY, FERRY, OTHER, CAN_SKIP;
+        WAY, FERRY, OTHER, CAN_SKIP, PERMITTED, RESTRICTED; // ORS-GH MOD - additional values
 
         public boolean isFerry() {
             return this.ordinal() == FERRY.ordinal();
@@ -447,6 +451,20 @@ public class EncodingManager implements EncodedValueLookup {
         public boolean canSkip() {
             return this.ordinal() == CAN_SKIP.ordinal();
         }
+
+        // ORS-GH MOD START - additional methods
+        public boolean isPermitted() {
+            return this.ordinal() == PERMITTED.ordinal();
+        }
+
+        public boolean isRestricted() {
+            return this.ordinal() == RESTRICTED.ordinal();
+        }
+
+        public boolean isConditional() {
+            return isRestricted() || isPermitted();
+        }
+        // ORS-GH MOD END
     }
 
     public IntsRef handleRelationTags(ReaderRelation relation, IntsRef relFlags) {
@@ -563,6 +581,34 @@ public class EncodingManager implements EncodedValueLookup {
                 return true;
         }
         return false;
+    }
+
+    // ORS-GH MOD START - additional methods
+    public boolean hasConditionalAccess() {
+        for (FlagEncoder encoder : edgeEncoders) {
+            if (hasEncodedValue(getKey(encoder, ConditionalEdges.ACCESS)))
+                return true;
+        }
+        return false;
+    }
+
+    public boolean hasConditionalSpeed() {
+        for (FlagEncoder encoder : edgeEncoders) {
+            if (hasEncodedValue(getKey(encoder, ConditionalEdges.SPEED)))
+                return true;
+        }
+        return false;
+    }
+    // ORS-GH MOD END
+
+    public List<BooleanEncodedValue> getAccessEncFromNodeFlags(long importNodeFlags) {
+        List<BooleanEncodedValue> list = new ArrayList<>(edgeEncoders.size());
+        for (int i = 0; i < edgeEncoders.size(); i++) {
+            FlagEncoder encoder = edgeEncoders.get(i);
+            if (((1L << i) & importNodeFlags) != 0)
+                list.add(encoder.getAccessEnc());
+        }
+        return list;
     }
 
     @Override

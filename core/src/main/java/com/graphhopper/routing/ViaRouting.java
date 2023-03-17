@@ -24,6 +24,7 @@ import com.graphhopper.routing.ev.RoadClass;
 import com.graphhopper.routing.ev.RoadEnvironment;
 import com.graphhopper.routing.querygraph.QueryGraph;
 import com.graphhopper.routing.util.*;
+import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.Snap;
 import com.graphhopper.util.EdgeIterator;
@@ -93,6 +94,12 @@ public class ViaRouting {
     }
 
     public static Result calcPaths(List<GHPoint> points, QueryGraph queryGraph, List<Snap> snaps, DirectedEdgeFilter directedEdgeFilter, PathCalculator pathCalculator, List<String> curbsides, boolean forceCurbsides, List<Double> headings, boolean passThrough) {
+        // ORS-GH MOD START - add argument for TD routing
+        return calcPaths(points, queryGraph, snaps, directedEdgeFilter, pathCalculator, curbsides, forceCurbsides, headings, passThrough, -1);
+    }
+
+    public static Result calcPaths(List<GHPoint> points, QueryGraph queryGraph, List<Snap> snaps, DirectedEdgeFilter directedEdgeFilter, PathCalculator pathCalculator, List<String> curbsides, boolean forceCurbsides, List<Double> headings, boolean passThrough, long time) {
+// ORS-GH MOD END
         if (!curbsides.isEmpty() && curbsides.size() != points.size())
             throw new IllegalArgumentException("If you pass " + CURBSIDE + ", you need to pass exactly one curbside for every point, empty curbsides will be ignored");
         if (!curbsides.isEmpty() && !headings.isEmpty())
@@ -133,7 +140,7 @@ public class ViaRouting {
             edgeRestrictions.setTargetInEdge(ignoreThrowOrAcceptImpossibleCurbsides(curbsides, edgeRestrictions.getTargetInEdge(), leg + 1, forceCurbsides));
 
             // calculate paths
-            List<Path> paths = pathCalculator.calcPaths(fromSnap.getClosestNode(), toSnap.getClosestNode(), edgeRestrictions);
+            List<Path> paths = pathCalculator.calcPaths(fromSnap.getClosestNode(), toSnap.getClosestNode(), time, edgeRestrictions);
             result.debug += pathCalculator.getDebugString();
 
             // for alternative routing we get multiple paths and add all of them (which is ok, because we do not allow

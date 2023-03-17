@@ -49,20 +49,24 @@ import static com.graphhopper.util.Helper.nf;
  * @author Peter Karich
  */
 public class PrepareContractionHierarchies {
-    private final Logger logger = LoggerFactory.getLogger(getClass());
-    private final CHConfig chConfig;
-    private final CHStorage chStore;
-    private final CHStorageBuilder chBuilder;
+// ORS-GH MOD START change access from private to public
+    public final Logger logger = LoggerFactory.getLogger(getClass());
+    public final CHConfig chConfig;
+    public final CHStorage chStore;
+    public final CHStorageBuilder chBuilder;
+// ORS-GH MOD END
     private final Random rand = new Random(123);
     private final StopWatch allSW = new StopWatch();
     private final StopWatch periodicUpdateSW = new StopWatch();
     private final StopWatch lazyUpdateSW = new StopWatch();
     private final StopWatch neighborUpdateSW = new StopWatch();
     private final StopWatch contractionSW = new StopWatch();
-    private final Params params;
-    private final GraphHopperStorage graph;
-    private NodeContractor nodeContractor;
-    private final int nodes;
+// ORS-GH MOD START change access from private to public
+    public final Params params;
+    public final GraphHopperStorage graph;
+    public NodeContractor nodeContractor;
+    public final int nodes;
+// ORS-GH MOD END
     private NodeOrderingProvider nodeOrderingProvider;
     private int maxLevel;
     // nodes with highest priority come last

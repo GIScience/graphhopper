@@ -66,10 +66,23 @@ public class CHStorage {
     // use this to report shortcuts with too small weights
     private Consumer<LowWeightShortcut> lowShortcutWeightConsumer;
 
+    // ORS-GH MOD START add member variable and constructor
+    private boolean isTypeCore;
+    private int coreNodeCount = -1;
+    private int S_TIME;
+    private String name;
+
     public CHStorage(Directory dir, String name, int segmentSize, boolean edgeBased) {
+        this(dir, name, segmentSize, edgeBased, "ch");
+    }
+
+    public CHStorage(Directory dir, String name, int segmentSize, boolean edgeBased, String type) {
+        this.name = name;
+        this.isTypeCore =  CHConfig.TYPE_CORE.equals(type);
+        this.nodesCH = dir.create("nodes_" + type + "_" + name, DAType.getPreferredInt(dir.getDefaultType()));
+        this.shortcuts = dir.create("shortcuts_" + type + "_" + name, DAType.getPreferredInt(dir.getDefaultType()));
+        // ORS-GH MOD END
         this.edgeBased = edgeBased;
-        this.nodesCH = dir.create("nodes_ch_" + name, dir.getDefaultType("nodes_ch_" + name, true), segmentSize);
-        this.shortcuts = dir.create("shortcuts_" + name, dir.getDefaultType("shortcuts_" + name, true), segmentSize);
         // shortcuts are stored consecutively using this layout (the last two entries only exist for edge-based):
         // NODEA | NODEB | WEIGHT | SKIP_EDGE1 | SKIP_EDGE2 | S_ORIG_FIRST | S_ORIG_LAST
         S_NODEA = 0;
@@ -80,6 +93,12 @@ public class CHStorage {
         S_ORIG_FIRST = S_SKIP_EDGE2 + (edgeBased ? 4 : 0);
         S_ORIG_LAST = S_ORIG_FIRST + (edgeBased ? 4 : 0);
         shortcutEntryBytes = S_ORIG_LAST + 4;
+        // ORS-GH MOD START: TD CALT
+        if (isTypeCore) {
+            S_TIME = shortcutEntryBytes;
+            shortcutEntryBytes = S_TIME + 4;
+        }
+        // ORS-GH MOD END
 
         // nodes/levels are stored consecutively using this layout:
         // LEVEL | N_LAST_SC
@@ -128,6 +147,9 @@ public class CHStorage {
         nodesCH.setHeader(0, Constants.VERSION_NODE_CH);
         nodesCH.setHeader(4, nodeCount);
         nodesCH.setHeader(8, nodeCHEntryBytes);
+        // ORS-GH MOD START added header field
+        nodesCH.setHeader(12, coreNodeCount);
+        // ORS-GH MOD END
         nodesCH.flush();
 
         // shortcuts
@@ -148,6 +170,9 @@ public class CHStorage {
         GHUtility.checkDAVersion(nodesCH.getName(), Constants.VERSION_NODE_CH, nodesCHVersion);
         nodeCount = nodesCH.getHeader(4);
         nodeCHEntryBytes = nodesCH.getHeader(8);
+        // ORS-GH MOD START added header field
+        coreNodeCount = nodesCH.getHeader(12);
+        // ORS-GH MOD END
 
         // shortcuts
         int shortcutsVersion = shortcuts.getHeader(0);
@@ -182,6 +207,17 @@ public class CHStorage {
         setOrigEdges(toShortcutPointer(shortcut), origFirst, origLast);
         return shortcut;
     }
+
+    // ORS-GH MOD START add method
+    public int shortcutCore(int nodeA, int nodeB, int accessFlags, double weight, int skip1, int skip2, int time) {
+        if (!isTypeCore) {
+            throw new IllegalStateException("Cannot add time to shortcuts of a non-core graph");
+        }
+        int shortcut = shortcut(nodeA, nodeB, accessFlags, weight, skip1, skip2);
+        shortcuts.setInt(toShortcutPointer(shortcut) + S_TIME, time);
+        return shortcut;
+    }
+    // ORS-GH MOD END
 
     private int shortcut(int nodeA, int nodeB, int accessFlags, double weight, int skip1, int skip2) {
         if (shortcutCount == Integer.MAX_VALUE)
@@ -311,6 +347,13 @@ public class CHStorage {
         return shortcuts.getInt(shortcutPointer + S_ORIG_LAST);
     }
 
+    // ORS-GH MOD START add method
+    public int getTime(long shortcutPointer) {
+        assert isTypeCore : "time is only available for core graph";
+        return shortcuts.getInt(shortcutPointer + S_TIME);
+    }
+    // ORS-GH MOD END
+
     public NodeOrderingProvider getNodeOrderingProvider() {
         int numNodes = getNodes();
         final int[] nodeOrdering = new int[numNodes];
@@ -407,6 +450,20 @@ public class CHStorage {
                     + MAX_STORED_INTEGER_WEIGHT);
         return weight;
     }
+
+    // ORS-GH MOD START add methods
+    public int getCoreNodes() {
+        return coreNodeCount;
+    }
+
+    public void setCoreNodes(int coreNodeCount) {
+        this.coreNodeCount = coreNodeCount;
+    }
+
+    public String getName() {
+        return name;
+    }
+    // ORS-GH MOD END
 
     public static class LowWeightShortcut {
         int nodeA;

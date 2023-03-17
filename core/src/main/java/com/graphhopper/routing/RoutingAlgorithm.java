@@ -17,6 +17,8 @@
  */
 package com.graphhopper.routing;
 
+import com.graphhopper.routing.util.EdgeFilter;
+
 import java.util.List;
 
 /**
@@ -33,12 +35,27 @@ public interface RoutingAlgorithm {
      */
     Path calcPath(int from, int to);
 
+    // ORS-GH MOD START: additional method
+    // needed for time-dependent routing
+    /**
+     * Calculates the best path between the specified nodes at a given time.
+     *
+     * @return the path. Call the method found() to make sure that the path is valid.
+     */
+    Path calcPath(int from, int to, long at);
+    // ORS-GH-MOD END
+
     /**
      * Calculates multiple possibilities for a path.
      *
      * @see #calcPath(int, int)
      */
     List<Path> calcPaths(int from, int to);
+
+    // ORS-GH MOD START: additional method
+    // needed for time-dependent routing
+    List<Path> calcPaths(int from, int to, long at);
+    // ORS-GH-MOD END
 
     /**
      * Limit the search to numberOfNodes. See #681
@@ -54,4 +71,8 @@ public interface RoutingAlgorithm {
      * Returns the visited nodes after searching. Useful for debugging.
      */
     int getVisitedNodes();
+
+    // ORS-GH MOD START: provide method for passing additionalEdgeFilter to any algo
+    RoutingAlgorithm setEdgeFilter(EdgeFilter additionalEdgeFilter);
+    // ORS-GH-MOD END
 }

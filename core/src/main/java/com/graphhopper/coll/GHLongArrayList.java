@@ -15,33 +15,35 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package com.graphhopper.coll;
 
-package com.graphhopper.http;
+import com.carrotsearch.hppc.LongArrayList;
 
-import io.dropwizard.jersey.params.AbstractParam;
-
-import javax.annotation.Nullable;
-import java.time.OffsetDateTime;
-import java.time.ZonedDateTime;
-
-public class OffsetDateTimeParam extends AbstractParam<OffsetDateTime> {
-    public OffsetDateTimeParam(@Nullable String input) {
-        super(input);
+/**
+ * @author Andrzej Oles
+ */
+public class GHLongArrayList extends LongArrayList {
+    public GHLongArrayList() {
+        super(10);
     }
 
-    public OffsetDateTimeParam(@Nullable String input, String parameterName) {
-        super(input, parameterName);
+    public GHLongArrayList(int capacity) {
+        super(capacity);
     }
 
-    @Override
-    protected String errorMessage(Exception e) {
-        return "%s must be in a ISO-8601 format.";
+    public GHLongArrayList(GHLongArrayList list) {
+        super(list);
     }
 
-    @Override
-    protected OffsetDateTime parse(@Nullable String input) throws Exception {
-        if (input == null)
-            return null;
-        return OffsetDateTime.parse(input);
+    public final GHLongArrayList reverse() {
+        final long[] buffer = this.buffer;
+        long tmp;
+        for (int start = 0, end = size() - 1; start < end; start++, end--) {
+            // swap the values
+            tmp = buffer[start];
+            buffer[start] = buffer[end];
+            buffer[end] = tmp;
+        }
+        return this;
     }
 }

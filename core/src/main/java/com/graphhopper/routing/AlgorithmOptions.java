@@ -17,6 +17,7 @@
  */
 package com.graphhopper.routing;
 
+import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.Parameters;
@@ -81,4 +82,15 @@ public class AlgorithmOptions {
         return algorithm + ", " + traversalMode;
     }
 
+    // ORS-GH MOD START: handle additional edgeFilter to pass to algo
+    protected EdgeFilter edgeFilter;
+
+    public EdgeFilter getEdgeFilter() {
+        return edgeFilter;
+    }
+
+    public void setEdgeFilter(EdgeFilter edgeFilter) {
+        this.edgeFilter = edgeFilter;
+    }
+    // ORS-GH MOD END
 }

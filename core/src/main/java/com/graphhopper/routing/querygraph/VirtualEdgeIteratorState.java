@@ -39,13 +39,26 @@ public class VirtualEdgeIteratorState implements EdgeIteratorState {
     private double distance;
     private IntsRef edgeFlags;
     private String name;
+    private String conditional; // ORS-GH MOD - additional field
     // true if edge should be avoided as start/stop
     private boolean unfavored;
     private EdgeIteratorState reverseEdge;
     private final boolean reverse;
 
+    // ORS-GH MOD START
+    // store actual edge ID for use in TurnWeighting, fixes turn restrictions on virtual edges
+    private final int originalEdgeId;
+
+    public int getOriginalEdge() {
+        return originalEdgeId;
+    }
+    // ORS-GH MOD END
+
     public VirtualEdgeIteratorState(int originalEdgeKey, int edgeKey, int baseNode, int adjNode, double distance,
                                     IntsRef edgeFlags, String name, PointList pointList, boolean reverse) {
+        // ORS-GH MOD START
+        this.originalEdgeId = GHUtility.getEdgeFromEdgeKey(originalEdgeKey);
+        // ORS-GH MOD END
         this.originalEdgeKey = originalEdgeKey;
         this.edgeKey = edgeKey;
         this.baseNode = baseNode;

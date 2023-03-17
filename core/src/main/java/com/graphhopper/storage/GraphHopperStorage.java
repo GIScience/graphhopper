@@ -20,6 +20,7 @@ package com.graphhopper.storage;
 import com.graphhopper.routing.util.AllEdgesIterator;
 import com.graphhopper.routing.util.EdgeFilter;
 import com.graphhopper.routing.util.EncodingManager;
+import com.graphhopper.routing.util.FlagEncoder;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.util.Constants;
 import com.graphhopper.util.EdgeExplorer;
@@ -27,8 +28,15 @@ import com.graphhopper.util.EdgeIteratorState;
 import com.graphhopper.util.shapes.BBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import us.dustinj.timezonemap.TimeZoneMap;
 
 import java.io.Closeable;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Iterator;
+import java.util.List;
+import java.util.stream.Collectors;
+// ORS-GH MOD END
 
 /**
  * This class manages all storage related methods and delegates the calls to the associated graphs.
@@ -39,12 +47,53 @@ import java.io.Closeable;
  *
  * @author Peter Karich
  */
-public final class GraphHopperStorage implements Graph, Closeable {
+public class GraphHopperStorage implements Graph, Closeable {
     private static final Logger LOGGER = LoggerFactory.getLogger(GraphHopperStorage.class);
     private final Directory dir;
     private final EncodingManager encodingManager;
     private final StorableProperties properties;
     private final BaseGraph baseGraph;
+
+    // ORS-GH MOD START - additional code
+    private ExtendedStorageSequence graphExtensions;
+
+    public ExtendedStorageSequence getExtensions() {
+        return graphExtensions;
+    }
+
+    private ConditionalEdges conditionalAccess;
+    private ConditionalEdges conditionalSpeed;
+
+    public ConditionalEdgesMap getConditionalAccess(FlagEncoder encoder) {
+        return getConditionalAccess(encoder.toString());
+    }
+
+    public ConditionalEdgesMap getConditionalAccess(String encoderName) {
+        return conditionalAccess.getConditionalEdgesMap(encoderName);
+    }
+
+    public ConditionalEdgesMap getConditionalSpeed(FlagEncoder encoder) {
+        return getConditionalSpeed(encoder.toString());
+    }
+
+    public ConditionalEdgesMap getConditionalSpeed(String encoderName) {
+        return conditionalSpeed.getConditionalEdgesMap(encoderName);
+    }
+
+    // FIXME: temporal solution until an external storage for time zones is introduced.
+    private TimeZoneMap timeZoneMap;
+
+    public TimeZoneMap getTimeZoneMap() {
+        return timeZoneMap;
+    }
+
+    public void setTimeZoneMap(TimeZoneMap timeZoneMap) {
+        this.timeZoneMap = timeZoneMap;
+    }
+    // ORS-GH MOD END
+
+    // same flush order etc
+    private final Collection<CHEntry> chEntries;
     private final int segmentSize;
 
     /**
@@ -58,17 +107,41 @@ public final class GraphHopperStorage implements Graph, Closeable {
         this.dir = dir;
         this.properties = new StorableProperties(dir);
         this.segmentSize = segmentSize;
+        // ORS-GH MOD START - additional storages
+        if (encodingManager.hasConditionalAccess()) {
+            this.conditionalAccess = new ConditionalEdges(encodingManager, ConditionalEdges.ACCESS, dir);
+        }
+
+        if (encodingManager.hasConditionalSpeed()) {
+            this.conditionalSpeed = new ConditionalEdges(encodingManager, ConditionalEdges.SPEED, dir);
+        }
+        // ORS-GH MOD END
         baseGraph = new BaseGraph(dir, encodingManager.getIntsForFlags(), withElevation, withTurnCosts, segmentSize);
+        chEntries = new ArrayList<>();
     }
 
+    // ORS-GH MOD START: additional method
+    public void setExtendedStorages(ExtendedStorageSequence seq) {
+        this.graphExtensions = seq;
+    }
+    // ORS-GH MOD END
+    // ORS-GH MOD START allow overriding in ORS
     public CHStorage createCHStorage(CHConfig chConfig) {
-        return createCHStorage(chConfig.getName(), chConfig.isEdgeBased());
+        if (getCHConfigs().contains(chConfig))
+            throw new IllegalArgumentException("For the given CH profile a CHStorage already exists: '" + chConfig.getName() + "'");
+        CHEntry chEntry = createCHEntry(chConfig);
+        chEntries.add(chEntry);
+        return chEntry.chStore;
     }
+    // ORS-GH MOD END
 
-    public CHStorage createCHStorage(String name, boolean edgeBased) {
+    // ORS-GH MOD START allow overriding in ORS
+    protected CHEntry createCHEntry(CHConfig chConfig) {
+        if (getCHConfigs().contains(chConfig))
+            throw new IllegalArgumentException("For the given CH profile a CHStorage already exists: '" + chConfig.getName() + "'");
         if (!isFrozen())
             throw new IllegalStateException("graph must be frozen before we can create ch graphs");
-        CHStorage store = new CHStorage(dir, name, segmentSize, edgeBased);
+        CHStorage store = new CHStorage(dir, chConfig.getName(), segmentSize, chConfig.isEdgeBased());
         store.setLowShortcutWeightConsumer(s -> {
             // we just log these to find mapping errors
             NodeAccess nodeAccess = baseGraph.getNodeAccess();
@@ -83,8 +156,10 @@ public final class GraphHopperStorage implements Graph, Closeable {
         // larger than needed, because we do not do something like trimToSize in the end.
         double expectedShortcuts = 0.3 * baseGraph.getEdges();
         store.init(baseGraph.getNodes(), (int) expectedShortcuts);
-        return store;
+        CHEntry chEntry = new CHEntry(chConfig, store, new RoutingCHGraphImpl(baseGraph, store, chConfig.getWeighting()));
+        return chEntry;
     }
+    // ORS-GH MOD END
 
     public CHStorage loadCHStorage(String chGraphName, boolean edgeBased) {
         CHStorage store = new CHStorage(dir, chGraphName, segmentSize, edgeBased);
@@ -93,6 +168,39 @@ public final class GraphHopperStorage implements Graph, Closeable {
 
     public RoutingCHGraph createCHGraph(CHStorage store, CHConfig chConfig) {
         return new RoutingCHGraphImpl(baseGraph, store, chConfig.getWeighting());
+    }
+
+    // ORS-GH MOD START
+    // CALT
+    // TODO ORS: should calt provide its own classes instead of modifying ch?
+    public RoutingCHGraphImpl getIsochroneGraph(Weighting weighting) {
+        if (chEntries.isEmpty())
+            throw new IllegalStateException("Cannot find graph implementation");
+        Iterator<CHEntry> iterator = chEntries.iterator();
+        while(iterator.hasNext()){
+            CHEntry cg = iterator.next();
+            if(cg.chConfig.getType() == "isocore"
+                    && cg.chConfig.getWeighting().getName() == weighting.getName()
+                    && cg.chConfig.getWeighting().getFlagEncoder().toString() == weighting.getFlagEncoder().toString())
+                return cg.chGraph;
+        }
+        throw new IllegalStateException("No isochrone graph was found");
+    }
+    // ORS-GH MOD END
+
+    public List<CHConfig> getCHConfigs() {
+        return chEntries.stream().map(c -> c.chConfig).collect(Collectors.toList());
+    }
+
+    public List<CHConfig> getCHConfigs(boolean edgeBased) {
+        List<CHConfig> result = new ArrayList<>();
+        List<CHConfig> chConfigs = getCHConfigs();
+        for (CHConfig profile : chConfigs) {
+            if (edgeBased == profile.isEdgeBased()) {
+                result.add(profile);
+            }
+        }
+        return result;
     }
 
     /**
@@ -115,8 +223,31 @@ public final class GraphHopperStorage implements Graph, Closeable {
         properties.create(100);
         properties.put("graph.encoded_values", encodingManager.toEncodedValuesAsString());
         properties.put("graph.flag_encoders", encodingManager.toFlagEncodersAsString());
+        long initSize = Math.max(byteCount, 100);
 
-        baseGraph.create(Math.max(byteCount, 100));
+        baseGraph.create(initSize);
+
+        // ORS-GH MOD START - create extended/conditional storages
+        if (graphExtensions != null) {
+            graphExtensions.create(initSize);
+        }
+        // TODO ORS: Find out byteCount to create these
+        if (conditionalAccess != null) {
+            conditionalAccess.create(initSize);
+        }
+        if (conditionalSpeed != null) {
+            conditionalSpeed.create(initSize);
+        }
+        // ORS-GH MOD END
+
+        chEntries.forEach(ch -> ch.chStore.create());
+
+        List<CHConfig> chConfigs = getCHConfigs();
+        List<String> chProfileNames = new ArrayList<>(chConfigs.size());
+        for (CHConfig chConfig : chConfigs) {
+            chProfileNames.add(chConfig.getName());
+        }
+        properties.put("graph.ch.profiles", chProfileNames.toString());
         return this;
     }
 
@@ -157,15 +288,36 @@ public final class GraphHopperStorage implements Graph, Closeable {
         return false;
     }
 
+    // ORS-GH MOD START add ORS hook
+    public void loadExistingORS() {};
+    // ORS-GH MOD END
+
     public void flush() {
         baseGraph.flush();
         properties.flush();
+        // ORS-GH MOD START - additional code
+        if (graphExtensions != null) {
+            graphExtensions.flush();
+        }
+        // ORS-GH MOD END
     }
 
     @Override
     public void close() {
         properties.close();
         baseGraph.close();
+        // ORS-GH MOD START - additional code
+        if (graphExtensions != null) {
+            graphExtensions.close();
+        }
+        if (conditionalAccess != null) {
+            conditionalAccess.close();
+        }
+        if (conditionalSpeed != null) {
+            conditionalSpeed.close();
+        }
+        // ORS-GH MOD END
+        chEntries.stream().map(ch -> ch.chStore).filter(s -> !s.isClosed()).forEach(CHStorage::close);
     }
 
     public boolean isClosed() {
@@ -173,7 +325,19 @@ public final class GraphHopperStorage implements Graph, Closeable {
     }
 
     public long getCapacity() {
-        return baseGraph.getCapacity() + properties.getCapacity();
+        long cnt = baseGraph.getCapacity() + properties.getCapacity();
+        // ORS-GH MOD START - additional code
+        if (graphExtensions != null) {
+            cnt += graphExtensions.getCapacity();
+        }
+        if (conditionalAccess != null) {
+            cnt += conditionalAccess.getCapacity();
+        }
+        if (conditionalSpeed != null) {
+            cnt += conditionalSpeed.getCapacity();
+        }
+        // ORS-GH MOD END
+        return cnt;
     }
 
     /**
@@ -294,4 +458,17 @@ public final class GraphHopperStorage implements Graph, Closeable {
         baseGraph.flushAndCloseGeometryAndNameStorage();
     }
 
+    // ORS-GH MOD START change to public in order to be able to access it from ORSGraphHopperStorage subclass
+    public static class CHEntry {
+        public CHConfig chConfig;
+        public CHStorage chStore;
+        public RoutingCHGraphImpl chGraph;
+
+        // ORS-GH MOD END
+        public CHEntry(CHConfig chConfig, CHStorage chStore, RoutingCHGraphImpl chGraph) {
+            this.chConfig = chConfig;
+            this.chStore = chStore;
+            this.chGraph = chGraph;
+        }
+    }
 }

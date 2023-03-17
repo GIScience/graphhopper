@@ -15,21 +15,13 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package com.graphhopper.routing.util;
 
-package com.graphhopper.routing;
+import com.graphhopper.storage.GraphHopperStorage;
+import com.graphhopper.util.PMap;
 
-import java.util.List;
-
-/**
- * Implementations of this class allow repeatedly calculating paths for different start/target nodes and edge restrictions
- */
-public interface PathCalculator {
-
-    // ORS-GH MOD START - add argument for TD routing
-    List<Path> calcPaths(int from, int to, long at, EdgeRestrictions edgeRestrictions);
-    // ORS-GH MOD END
-    String getDebugString();
-
-    int getVisitedNodes();
-
+// ORS GH-MOD: way to inject additional edgeFilters to router
+public interface EdgeFilterFactory {
+    EdgeFilter createEdgeFilter(PMap opts, FlagEncoder flagEncoder, GraphHopperStorage gs);
+    EdgeFilter createEdgeFilter(PMap opts, FlagEncoder flagEncoder, GraphHopperStorage gs, EdgeFilter prependFilter);
 }

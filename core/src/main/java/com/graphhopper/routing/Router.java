@@ -48,6 +48,7 @@ import com.graphhopper.util.exceptions.PointOutOfBoundsException;
 import com.graphhopper.util.shapes.BBox;
 import com.graphhopper.util.shapes.GHPoint;
 
+import java.time.Instant;
 import java.util.*;
 
 import static com.graphhopper.routing.weighting.Weighting.INFINITE_U_TURN_COSTS;
@@ -65,7 +66,11 @@ public class Router {
     private final TranslationMap translationMap;
     private final RouterConfig routerConfig;
     private final WeightingFactory weightingFactory;
-    // todo: these should not be necessary anymore as soon as GraphHopperStorage (or something that replaces) it acts
+    // ORS GH-MOD START: way to inject additional edgeFilters to router
+    private EdgeFilterFactory edgeFilterFactory;
+    protected PathProcessorFactory pathProcessorFactory = PathProcessorFactory.DEFAULT;
+    // ORS GH-MOD END
+    // todo refactoring: these should not be necessary anymore as soon as GraphHopperStorage (or something that replaces) it acts
     // like a 'graph database'
     private final Map<String, RoutingCHGraph> chGraphs;
     private final Map<String, LandmarkStorage> landmarks;
@@ -107,7 +112,9 @@ public class Router {
             checkCurbsides(request);
             checkNoBlockAreaWithCustomModel(request);
 
-            Solver solver = createSolver(request);
+            // ORS GH-MOD START: way to inject additional edgeFilters to router
+            Solver solver = createSolver(request, edgeFilterFactory);
+            // ORS GH-MOD END
             solver.checkRequest();
             solver.init();
 
@@ -131,6 +138,10 @@ public class Router {
             ghRsp.addError(ex);
             return ghRsp;
         }
+    }
+
+    public void setPathProcessorFactory(PathProcessorFactory newFactory) {
+        this.pathProcessorFactory = newFactory;
     }
 
     private void checkNoLegacyParameters(GHRequest request) {
@@ -183,15 +194,15 @@ public class Router {
             throw new IllegalArgumentException("When using `custom_model` do not use `block_area`. Use `areas` in the custom model instead");
     }
 
-    protected Solver createSolver(GHRequest request) {
+    protected Solver createSolver(GHRequest request, EdgeFilterFactory edgeFilterFactory) {
         final boolean disableCH = getDisableCH(request.getHints());
         final boolean disableLM = getDisableLM(request.getHints());
         if (chEnabled && !disableCH) {
             return new CHSolver(request, profilesByName, routerConfig, encodingManager, chGraphs);
         } else if (lmEnabled && !disableLM) {
-            return new LMSolver(request, profilesByName, routerConfig, encodingManager, weightingFactory, ghStorage, locationIndex, landmarks);
+            return new LMSolver(request, profilesByName, routerConfig, encodingManager, weightingFactory, ghStorage, locationIndex, landmarks).setEdgeFilterFactory(edgeFilterFactory);
         } else {
-            return new FlexSolver(request, profilesByName, routerConfig, encodingManager, weightingFactory, ghStorage, locationIndex);
+            return new FlexSolver(request, profilesByName, routerConfig, encodingManager, weightingFactory, ghStorage, locationIndex).setEdgeFilterFactory(edgeFilterFactory);
         }
     }
 
@@ -202,6 +213,9 @@ public class Router {
         RoundTripRouting.Params params = new RoundTripRouting.Params(request.getHints(), startHeading, routerConfig.getMaxRoundTripRetries());
         List<Snap> snaps = RoundTripRouting.lookup(request.getPoints(), solver.createSnapFilter(), locationIndex, params);
         ghRsp.addDebugInfo("idLookup:" + sw.stop().getSeconds() + "s");
+        // ORS-GH MOD START - additional code
+        checkMaxSearchDistances(request, ghRsp, snaps);
+        // ORS-GH MOD END
 
         QueryGraph queryGraph = QueryGraph.create(ghStorage, snaps);
         FlexiblePathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
@@ -210,10 +224,32 @@ public class Router {
         // we merge the different legs of the roundtrip into one response path
         ResponsePath responsePath = concatenatePaths(request, solver.weighting, queryGraph, result.paths, getWaypoints(snaps));
         ghRsp.add(responsePath);
+        // ORS-GH MOD START - pass graph date
+        String date = ghStorage.getProperties().get("datareader.import.date");
+        if (Helper.isEmpty(date)) {
+            date = ghStorage.getProperties().get("datareader.data.date");
+        }
+        ghRsp.getHints().putObject("data.date", date);
+        // ORS-GH MOD END
         ghRsp.getHints().putObject("visited_nodes.sum", result.visitedNodes);
         ghRsp.getHints().putObject("visited_nodes.average", (float) result.visitedNodes / (snaps.size() - 1));
         return ghRsp;
     }
+
+    // ORS-GH MOD START - additional method
+    private void checkMaxSearchDistances(GHRequest request, GHResponse ghRsp, List<Snap> snaps) {
+        double[] radiuses = request.getMaxSearchDistances();
+        List<GHPoint> points = request.getPoints();
+        if (points.size() == snaps.size()) {
+            for (int placeIndex = 0; placeIndex < points.size(); placeIndex++) {
+                Snap qr = snaps.get(placeIndex);
+                if ((radiuses != null) && qr.isValid() && (qr.getQueryDistance() > radiuses[placeIndex]) && (radiuses[placeIndex] != -1.0)) {
+                    ghRsp.addError(new PointNotFoundException("Cannot find point " + placeIndex + ": " + points.get(placeIndex) + " within a radius of " + radiuses[placeIndex] + " meters.", placeIndex));
+                }
+            }
+        }
+    }
+    // ORS-GH MOD END
 
     protected GHResponse routeAlt(GHRequest request, Solver solver) {
         if (request.getPoints().size() > 2)
@@ -224,6 +260,9 @@ public class Router {
         List<Snap> snaps = ViaRouting.lookup(encodingManager, request.getPoints(), solver.createSnapFilter(), locationIndex,
                 request.getSnapPreventions(), request.getPointHints(), directedEdgeFilter, request.getHeadings());
         ghRsp.addDebugInfo("idLookup:" + sw.stop().getSeconds() + "s");
+        // ORS-GH MOD START - additional code
+        checkMaxSearchDistances(request, ghRsp, snaps);
+        // ORS-GH MOD END
         QueryGraph queryGraph = QueryGraph.create(ghStorage, snaps);
         PathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
         boolean passThrough = getPassThrough(request.getHints());
@@ -241,9 +280,25 @@ public class Router {
         PathMerger pathMerger = createPathMerger(request, solver.weighting, queryGraph);
         for (Path path : result.paths) {
             PointList waypoints = getWaypoints(snaps);
-            ResponsePath responsePath = pathMerger.doWork(waypoints, Collections.singletonList(path), encodingManager, translationMap.getWithFallBack(request.getLocale()));
+            // ORS-GH MOD START - create and pass PathProcessor
+            ResponsePath responsePath;
+            if (request.getEncoderName() != null && !request.getEncoderName().isEmpty()) {
+                PathProcessor pathProcessor = pathProcessorFactory.createPathProcessor(request.getAdditionalHints(), encodingManager.getEncoder(request.getEncoderName()), ghStorage);
+                ghRsp.addReturnObject(pathProcessor);
+                responsePath = pathMerger.doWork(waypoints, Collections.singletonList(path), encodingManager, translationMap.getWithFallBack(request.getLocale()), pathProcessor);
+            } else {
+                responsePath = pathMerger.doWork(waypoints, Collections.singletonList(path), encodingManager, translationMap.getWithFallBack(request.getLocale()));
+            }
+            // ORS-GH MOD END
             ghRsp.add(responsePath);
         }
+        // ORS-GH MOD START - pass graph date
+        String date = ghStorage.getProperties().get("datareader.import.date");
+        if (Helper.isEmpty(date)) {
+            date = ghStorage.getProperties().get("datareader.data.date");
+        }
+        ghRsp.getHints().putObject("data.date", date);
+        // ORS-GH MOD END
         ghRsp.getHints().putObject("visited_nodes.sum", result.visitedNodes);
         ghRsp.getHints().putObject("visited_nodes.average", (float) result.visitedNodes / (snaps.size() - 1));
         return ghRsp;
@@ -256,22 +311,46 @@ public class Router {
         List<Snap> snaps = ViaRouting.lookup(encodingManager, request.getPoints(), solver.createSnapFilter(), locationIndex,
                 request.getSnapPreventions(), request.getPointHints(), directedEdgeFilter, request.getHeadings());
         ghRsp.addDebugInfo("idLookup:" + sw.stop().getSeconds() + "s");
+        // ORS-GH MOD START - additional code
+        checkMaxSearchDistances(request, ghRsp, snaps);
+        // ORS-GH MOD END
         // (base) query graph used to resolve headings, curbsides etc. this is not necessarily the same thing as
         // the (possibly implementation specific) query graph used by PathCalculator
         QueryGraph queryGraph = QueryGraph.create(ghStorage, snaps);
         PathCalculator pathCalculator = solver.createPathCalculator(queryGraph);
         boolean passThrough = getPassThrough(request.getHints());
         boolean forceCurbsides = getForceCurbsides(request.getHints());
+        // ORS-GH MOD START: enable TD routing
+        long time = getTime(request.getHints());
         ViaRouting.Result result = ViaRouting.calcPaths(request.getPoints(), queryGraph, snaps, directedEdgeFilter,
-                pathCalculator, request.getCurbsides(), forceCurbsides, request.getHeadings(), passThrough);
+                pathCalculator, request.getCurbsides(), forceCurbsides, request.getHeadings(), passThrough, time);
+        // ORS-GH MOD END
 
         if (request.getPoints().size() != result.paths.size() + 1)
             throw new RuntimeException("There should be exactly one more point than paths. points:" + request.getPoints().size() + ", paths:" + result.paths.size());
 
         // here each path represents one leg of the via-route and we merge them all together into one response path
-        ResponsePath responsePath = concatenatePaths(request, solver.weighting, queryGraph, result.paths, getWaypoints(snaps));
+        ResponsePath responsePath;
+        // ORS-GH MOD START - create and pass PathProcessor
+        if (request.getEncoderName() != null && !request.getEncoderName().isEmpty()) {
+            PathProcessor pathProcessor = pathProcessorFactory.createPathProcessor(request.getAdditionalHints(), encodingManager.getEncoder(request.getEncoderName()), ghStorage);
+            responsePath = concatenatePaths(request, solver.weighting, queryGraph, result.paths, getWaypoints(snaps), pathProcessor);
+            ghRsp.addReturnObject(pathProcessor);
+        } else {
+            // here each path represents one leg of the via-route and we merge them all together into one response path
+            responsePath = concatenatePaths(request, solver.weighting, queryGraph, result.paths, getWaypoints(snaps));
+        }
+        // ORS-GH MOD END
+
         responsePath.addDebugInfo(result.debug);
         ghRsp.add(responsePath);
+        // ORS-GH MOD START - pass graph date
+        String date = ghStorage.getProperties().get("datareader.import.date");
+        if (Helper.isEmpty(date)) {
+            date = ghStorage.getProperties().get("datareader.data.date");
+        }
+        ghRsp.getHints().putObject("data.date", date);
+        // ORS-GH MOD END
         ghRsp.getHints().putObject("visited_nodes.sum", result.visitedNodes);
         ghRsp.getHints().putObject("visited_nodes.average", (float) result.visitedNodes / (snaps.size() - 1));
         return ghRsp;
@@ -303,6 +382,13 @@ public class Router {
         return pathMerger.doWork(waypoints, paths, encodingManager, translationMap.getWithFallBack(request.getLocale()));
     }
 
+    // ORS-GH MOD START - pass PathProcessor
+    private ResponsePath concatenatePaths(GHRequest request, Weighting weighting, QueryGraph queryGraph, List<Path> paths, PointList waypoints, PathProcessor pathProcessor) {
+        PathMerger pathMerger = createPathMerger(request, weighting, queryGraph);
+        return pathMerger.doWork(waypoints, paths, encodingManager, translationMap.getWithFallBack(request.getLocale()), pathProcessor);
+    }
+    // ORS-GH MOD END
+
     private PointList getWaypoints(List<Snap> snaps) {
         PointList pointList = new PointList(snaps.size(), true);
         for (Snap snap : snaps) {
@@ -327,6 +413,18 @@ public class Router {
         return hints.getBool(FORCE_CURBSIDE, true);
     }
 
+    // ORS GH-MOD START
+    private static long getTime(PMap hints) {
+        Instant time = hints.has("departure") ? hints.getObject("departure", null) : hints.getObject("arrival", null);
+        return (time == null) ? -1 : time.toEpochMilli();
+    }
+
+    // way to inject additional edgeFilters to router
+    public void setEdgeFilterFactory(EdgeFilterFactory edgeFilterFactory) {
+        this.edgeFilterFactory = edgeFilterFactory;
+    }
+    // ORS GH-MOD END
+
     public static abstract class Solver {
         protected final GHRequest request;
         private final Map<String, Profile> profilesByName;
@@ -334,6 +432,9 @@ public class Router {
         protected Profile profile;
         protected Weighting weighting;
         protected final EncodedValueLookup lookup;
+        // ORS GH-MOD START: inject additional edgeFilters
+        protected EdgeFilterFactory edgeFilterFactory;
+        // ORS GH-MOD END
 
         public Solver(GHRequest request, Map<String, Profile> profilesByName, RouterConfig routerConfig, EncodedValueLookup lookup) {
             this.request = request;
@@ -362,6 +463,13 @@ public class Router {
             checkProfileCompatibility();
             weighting = createWeighting();
         }
+
+        // ORS GH-MOD START: inject edgeFilterFactory
+        public Solver setEdgeFilterFactory(EdgeFilterFactory edgeFilterFactory) {
+            this.edgeFilterFactory = edgeFilterFactory;
+            return this;
+        }
+        // ORS GH-MOD END
 
         protected Profile getProfile() {
             Profile profile = profilesByName.get(request.getProfile());
@@ -407,7 +515,9 @@ public class Router {
             return turnCostProfiles;
         }
 
-        int getMaxVisitedNodes(PMap hints) {
+        // ORS GH-MOD START: change access
+        protected int getMaxVisitedNodes(PMap hints) {
+        // ORS GH-MOD END
             return hints.getInt(Parameters.Routing.MAX_VISITED_NODES, routerConfig.getMaxVisitedNodes());
         }
     }
@@ -508,6 +618,16 @@ public class Router {
             return new FlexiblePathCalculator(queryGraph, algorithmFactory, weighting, getAlgoOpts());
         }
 
+// ORS-GH MOD START: pass edgeFilter
+        @Override
+        protected EdgeFilter createSnapFilter() {
+            EdgeFilter defaultSnapFilter = new DefaultSnapFilter(weighting, lookup.getBooleanEncodedValue(Subnetwork.key(profile.getName())));
+            if (edgeFilterFactory != null)
+                return edgeFilterFactory.createEdgeFilter(request.getAdditionalHints(), weighting.getFlagEncoder(), ghStorage, defaultSnapFilter);
+            return defaultSnapFilter;
+        }
+// ORS MOD END
+
         AlgorithmOptions getAlgoOpts() {
             AlgorithmOptions algoOpts = new AlgorithmOptions().
                     setAlgorithm(request.getAlgorithm()).
@@ -520,6 +640,10 @@ public class Router {
                 algoOpts.setAlgorithm(Parameters.Algorithms.ASTAR_BI);
                 algoOpts.getHints().putObject(Parameters.Algorithms.AStarBi.EPSILON, 2);
             }
+// ORS-GH MOD START: pass edgeFilter
+            if (edgeFilterFactory != null)
+                algoOpts.setEdgeFilter(edgeFilterFactory.createEdgeFilter(request.getAdditionalHints(), weighting.getFlagEncoder(), ghStorage));
+// ORS MOD END
             return algoOpts;
         }
 

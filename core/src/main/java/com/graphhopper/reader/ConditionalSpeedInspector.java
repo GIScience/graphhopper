@@ -15,21 +15,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-
-package com.graphhopper.routing;
-
-import java.util.List;
+package com.graphhopper.reader;
 
 /**
- * Implementations of this class allow repeatedly calculating paths for different start/target nodes and edge restrictions
+ * @author Andrzej Oles
  */
-public interface PathCalculator {
-
-    // ORS-GH MOD START - add argument for TD routing
-    List<Path> calcPaths(int from, int to, long at, EdgeRestrictions edgeRestrictions);
-    // ORS-GH MOD END
-    String getDebugString();
-
-    int getVisitedNodes();
-
+public interface ConditionalSpeedInspector extends ConditionalInspector{
+    boolean hasConditionalSpeed(ReaderWay way);
 }

@@ -16,20 +16,31 @@
  *  limitations under the License.
  */
 
-package com.graphhopper.routing;
+package com.graphhopper.http;
 
-import java.util.List;
+import io.dropwizard.jersey.params.AbstractParam;
+import org.codehaus.commons.nullanalysis.Nullable;
 
-/**
- * Implementations of this class allow repeatedly calculating paths for different start/target nodes and edge restrictions
- */
-public interface PathCalculator {
+import java.time.OffsetDateTime;
 
-    // ORS-GH MOD START - add argument for TD routing
-    List<Path> calcPaths(int from, int to, long at, EdgeRestrictions edgeRestrictions);
-    // ORS-GH MOD END
-    String getDebugString();
+public class OffsetDateTimeParam extends AbstractParam<OffsetDateTime> {
+    public OffsetDateTimeParam(@Nullable String input) {
+        super(input);
+    }
 
-    int getVisitedNodes();
+    public OffsetDateTimeParam(@Nullable String input, String parameterName) {
+        super(input, parameterName);
+    }
 
+    @Override
+    protected String errorMessage(Exception e) {
+        return "%s must be in a ISO-8601 format.";
+    }
+
+    @Override
+    protected OffsetDateTime parse(@Nullable String input) throws Exception {
+        if (input == null)
+            return null;
+        return OffsetDateTime.parse(input);
+    }
 }

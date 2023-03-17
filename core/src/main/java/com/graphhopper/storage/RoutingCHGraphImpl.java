@@ -98,6 +98,12 @@ public class RoutingCHGraphImpl implements RoutingCHGraph {
         return weighting.calcTurnWeight(edgeFrom, nodeVia, edgeTo);
     }
 
+    // ORS-GH MOD START add method
+    public int getCoreNodes() {
+        return chStorage.getCoreNodes();
+    }
+    // ORS-GH MOD END
+
     @Override
     public void close() {
         if (!baseGraph.isClosed()) baseGraph.close();
