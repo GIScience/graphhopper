@@ -101,10 +101,10 @@ class GtfsReader {
         this.indexBuilder = indexBuilder;
     }
 
-    void connectStopsToStreetNetwork() {
+    void connectStopsToStreetNetwork(String profileName) {
         EncodingManager em = graph.getEncodingManager();
         FlagEncoder footEncoder = em.getEncoder("foot");
-        final EdgeFilter filter = new DefaultSnapFilter(new FastestWeighting(footEncoder), em.getBooleanEncodedValue(Subnetwork.key("foot")));
+        final EdgeFilter filter = new DefaultSnapFilter(new FastestWeighting(footEncoder), em.getBooleanEncodedValue(Subnetwork.key(profileName)));
         for (Stop stop : feed.stops.values()) {
             if (stop.location_type == 0) { // Only stops. Not interested in parent stations for now.
                 Snap locationSnap = walkNetworkIndex.findClosest(stop.stop_lat, stop.stop_lon, filter);

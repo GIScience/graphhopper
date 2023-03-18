@@ -325,24 +325,26 @@ public class GTFSFeed implements Cloneable, Closeable {
      * @return          the LineString representing the trip geometry.
      * @see             LineString
      */
-    public LineString getTripGeometry(String trip_id){
-
-        CoordinateList coordinates = new CoordinateList();
-        LineString ls = null;
+    public LineString getTripGeometry(String trip_id, List<StopTime> tripStopTimes){
         Trip trip = trips.get(trip_id);
-
-        // If trip has shape_id, use it to generate geometry.
-        if (trip.shape_id != null) {
+        // If trip has shape_id and we know the relevant stops / stoptimes, use those to generate geometry.
+        if (trip != null && trip.shape_id != null && tripStopTimes != null && tripStopTimes.size() >= 2) {
             Shape shape = getShape(trip.shape_id);
-            if (shape != null) ls = shape.geometry;
+            if (shape != null) {
+                return shape.getGeometryStartToEnd(
+                    tripStopTimes.get(0).shape_dist_traveled,
+                    tripStopTimes.get(tripStopTimes.size() - 1).shape_dist_traveled,
+                    stops.get(tripStopTimes.get(0).stop_id).getCoordinates(),
+                    stops.get(tripStopTimes.get(tripStopTimes.size() - 1).stop_id).getCoordinates()
+                );
+            }
         }
-
-        // Use the ordered stoptimes.
-        if (ls == null) {
-            ls = getStraightLineForStops(trip_id);
+        // Else Use the stoptimes
+        if (tripStopTimes != null) {
+            return gf.createLineString(tripStopTimes.stream().map(st -> stops.get(st.stop_id).getCoordinates())
+                    .collect(Collectors.toList()).toArray(new Coordinate[tripStopTimes.size()]));
         }
-
-        return ls;
+        return null;
     }
 
     /**

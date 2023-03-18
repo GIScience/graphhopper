@@ -108,6 +108,12 @@ class EdgeBasedNodeContractor implements NodeContractor {
         bridgePathFinder = new BridgePathFinder(prepareGraph);
         meanDegree = prepareGraph.getOriginalEdges() * 1.0 / prepareGraph.getNodes();
     }
+// ORS-GH MOD START
+    @Override
+    public void prepareContraction() {
+        // not needed
+    }
+// ORS-GH MOD END
 
     @Override
     public float calculatePriority(int node) {
@@ -160,6 +166,11 @@ class EdgeBasedNodeContractor implements NodeContractor {
     @Override
     public long getAddedShortcutsCount() {
         return addedShortcutsCount;
+    }
+
+    @Override
+    public long getDijkstraCount() {
+        return witnessPathSearcher.getTotalNumSearches();
     }
 
     @Override

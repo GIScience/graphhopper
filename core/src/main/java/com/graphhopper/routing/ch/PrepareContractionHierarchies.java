@@ -96,6 +96,15 @@ public class PrepareContractionHierarchies {
         }
     }
 
+// ORS-GH MOD START method which can be overridden in ORS
+    public CHStorage getCHStore (CHConfig chConfig) {
+        CHStorage chStore = graph.getCHStore(chConfig.getName());
+        if (chStore == null)
+            throw new IllegalArgumentException("There is no CH graph '" + chConfig.getName() + "', existing: " + graph.getCHGraphNames());
+        return chStore;
+    }
+// ORS-GH MOD END
+
     public PrepareContractionHierarchies setParams(PMap pMap) {
         this.pMap = pMap;
         params.setPeriodicUpdatesPercentage(pMap.getInt(PERIODIC_UPDATES, params.getPeriodicUpdatesPercentage()));

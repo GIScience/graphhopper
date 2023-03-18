@@ -127,6 +127,17 @@ public class RoutingCHEdgeIteratorStateImpl implements RoutingCHEdgeIteratorStat
         }
     }
 
+// ORS-GH MOD START add method for TD core routing
+    @Override
+    public int getTime(boolean reverse, long time) {
+        if (isShortcut()) {
+            return store.getTime(shortcutPointer);
+        } else {
+            return (int) weighting.calcEdgeMillis(getBaseGraphEdgeState(), reverse, time);
+        }
+    }
+// ORS-GH MOD END
+
     /**
      * @param needWeight if true this method will return as soon as its clear that the weight is finite (no need to
      *                   do the full computation)
@@ -146,7 +157,7 @@ public class RoutingCHEdgeIteratorStateImpl implements RoutingCHEdgeIteratorStat
         return weighting.calcEdgeWeight(baseEdge, reverse);
     }
 
-    private EdgeIteratorState getBaseGraphEdgeState() {
+    public EdgeIteratorState getBaseGraphEdgeState() {
         checkShortcut(false, "getBaseGraphEdgeState");
         return edgeState();
     }

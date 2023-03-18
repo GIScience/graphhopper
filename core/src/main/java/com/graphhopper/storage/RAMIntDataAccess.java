@@ -250,7 +250,7 @@ class RAMIntDataAccess extends AbstractDataAccess {
     }
 
     @Override
-    DataAccess setSegmentSize(int bytes) {
+    public DataAccess setSegmentSize(int bytes) {
         super.setSegmentSize(bytes);
         segmentSizeIntsPower = (int) (Math.log(segmentSizeInBytes / 4) / Math.log(2));
         indexDivisor = segmentSizeInBytes / 4 - 1;

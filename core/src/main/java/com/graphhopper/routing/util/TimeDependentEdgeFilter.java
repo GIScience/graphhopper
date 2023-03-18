@@ -15,39 +15,18 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
+package com.graphhopper.routing.util;
 
-package com.graphhopper.routing.ch;
+import com.graphhopper.util.EdgeIteratorState;
 
-import com.carrotsearch.hppc.IntContainer;
-
-public interface NodeContractor {
-    void initFromGraph();
-
-    void close();
-
+/**
+ * Class used to traverse a graph.
+ *
+ * @author Andrzej Oles
+ */
+public interface TimeDependentEdgeFilter {
     /**
-     * Calculates the priority of a node without changing the graph. Lower (!!) priority nodes are contracted first.
+     * @return true if the current edge should be processed and false otherwise.
      */
-    float calculatePriority(int node);
-
-    /**
-     * Adds the required shortcuts for the given node.
-     *
-     * @return the set of nodes adjacent to this node (before contraction)
-     */
-    IntContainer contractNode(int node);
-
-    void finishContraction();
-
-    long getAddedShortcutsCount();
-
-    String getStatisticsString();
-
-// ORS-GH MOD START keep old functions
-//    TODO evalute if needed
-    long getDijkstraCount();
-
-    void prepareContraction();
-// ORS-GH MOD END
-    float getDijkstraSeconds();
+    boolean accept(EdgeIteratorState edgeState, long time);
 }

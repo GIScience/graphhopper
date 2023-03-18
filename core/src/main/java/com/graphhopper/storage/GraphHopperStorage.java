@@ -47,7 +47,9 @@ import java.util.stream.Collectors;
  *
  * @author Peter Karich
  */
+// ORS-GH MOD START remove final in order to allow for ORS subclass
 public class GraphHopperStorage implements Graph, Closeable {
+// ORS-GH END
     private static final Logger LOGGER = LoggerFactory.getLogger(GraphHopperStorage.class);
     private final Directory dir;
     private final EncodingManager encodingManager;
@@ -126,6 +128,7 @@ public class GraphHopperStorage implements Graph, Closeable {
     }
     // ORS-GH MOD END
     // ORS-GH MOD START allow overriding in ORS
+    // addCHGraph()
     public CHStorage createCHStorage(CHConfig chConfig) {
         if (getCHConfigs().contains(chConfig))
             throw new IllegalArgumentException("For the given CH profile a CHStorage already exists: '" + chConfig.getName() + "'");
@@ -159,7 +162,46 @@ public class GraphHopperStorage implements Graph, Closeable {
         CHEntry chEntry = new CHEntry(chConfig, store, new RoutingCHGraphImpl(baseGraph, store, chConfig.getWeighting()));
         return chEntry;
     }
+
+    /**
+     * @return the (only) {@link CHStorage}, or error if there are none or multiple ones
+     */
+    public CHStorage getCHStore() {
+        return getCHEntry().chStore;
+    }
+
+    /**
+     * @return the {@link CHStorage} for the specified profile name, or null if it does not exist
+     */
+    public CHStorage getCHStore(String chName) {
+        CHEntry chEntry = getCHEntry(chName);
+        return chEntry == null ? null : chEntry.chStore;
+    }
+
+    /**
+     * @return the (only) {@link CHConfig}, or error if there are none or multiple ones
+     */
+    public CHConfig getCHConfig() {
+        // todo: there is no need to expose CHConfig. The RoutingCHGraphs already keep a reference to their weighting.
+        return getCHEntry().chConfig;
+    }
+
     // ORS-GH MOD END
+
+    /**
+     * @return the (only) {@link RoutingCHGraph}, or error if there are none or multiple ones
+     */
+    public RoutingCHGraph getRoutingCHGraph() {
+        return getCHEntry().chGraph;
+    }
+
+    /**
+     * @return the {@link RoutingCHGraph} for the specified profile name, or null if it does not exist
+     */
+    public RoutingCHGraph getRoutingCHGraph(String chName) {
+        CHEntry chEntry = getCHEntry(chName);
+        return chEntry == null ? null : chEntry.chGraph;
+    }
 
     public CHStorage loadCHStorage(String chGraphName, boolean edgeBased) {
         CHStorage store = new CHStorage(dir, chGraphName, segmentSize, edgeBased);
@@ -168,6 +210,28 @@ public class GraphHopperStorage implements Graph, Closeable {
 
     public RoutingCHGraph createCHGraph(CHStorage store, CHConfig chConfig) {
         return new RoutingCHGraphImpl(baseGraph, store, chConfig.getWeighting());
+    }
+
+    private CHEntry getCHEntry() {
+        if (chEntries.isEmpty()) {
+            throw new IllegalStateException("There are no CHs");
+        } else if (chEntries.size() > 1) {
+            throw new IllegalStateException("There are multiple CHs, use get...(name) to retrieve a specific one");
+        } else {
+            return chEntries.iterator().next();
+        }
+    }
+
+    public CHEntry getCHEntry(String chName) {
+        for (CHEntry cg : chEntries) {
+            if (cg.chConfig.getName().equals(chName))
+                return cg;
+        }
+        return null;
+    }
+
+    public List<String> getCHGraphNames() {
+        return chEntries.stream().map(ch -> ch.chConfig.getName()).collect(Collectors.toList());
     }
 
     // ORS-GH MOD START

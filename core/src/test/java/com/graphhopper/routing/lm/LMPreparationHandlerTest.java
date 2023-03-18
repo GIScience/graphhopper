@@ -41,7 +41,7 @@ public class LMPreparationHandlerTest {
                 new LMConfig("conf1", new FastestWeighting(car)),
                 new LMConfig("conf2", new ShortestWeighting(car))
         );
-        List<PrepareLandmarks> preparations = handler.createPreparations(lmConfigs, new GraphBuilder(em).build(), null);
+        List<PrepareLandmarks> preparations = handler.createPreparations(new GraphBuilder(em).build(), null);
         assertEquals(1, preparations.get(0).getLandmarkStorage().getFactor(), .1);
         assertEquals(0.3, preparations.get(1).getLandmarkStorage().getFactor(), .1);
     }

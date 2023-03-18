@@ -26,7 +26,6 @@ import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.JsonFeatureCollection;
-import com.graphhopper.util.Parameters;
 import com.graphhopper.util.Parameters.Landmark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -48,9 +47,18 @@ import static com.graphhopper.util.Helper.*;
  * @author Peter Karich
  */
 public class LMPreparationHandler {
-    private static final Logger LOGGER = LoggerFactory.getLogger(LMPreparationHandler.class);
+// ORS-GH MOD START enable logging for subclasses
+    private final Logger LOGGER = LoggerFactory.getLogger(getClass());
+// ORS-GH MOD END
     private int landmarkCount = 16;
+
+    private List<PrepareLandmarks> preparations = new ArrayList<>();
+    // we first add the profiles and later read them to create the config objects (because they require
+    // the actual Weightings)
     private final List<LMProfile> lmProfiles = new ArrayList<>();
+// ORS-GH MOD START
+    private final List<LMConfig> lmConfigs = new ArrayList<>();
+// ORS-GH MOD END
     private final Map<String, Double> maximumWeights = new HashMap<>();
     private int minNodes = -1;
     private final List<String> lmSuggestionsLocations = new ArrayList<>(5);
@@ -58,24 +66,39 @@ public class LMPreparationHandler {
     private boolean logDetails = false;
     private AreaIndex<SplitArea> areaIndex;
 
+// ORS-GH MOD START facilitate overriding in subclasses
+    protected String PREPARE = Landmark.PREPARE;
+    protected String DISABLE = Landmark.DISABLE;
+    protected String COUNT = Landmark.COUNT;
+// ORS-GH MOD END
+
     public LMPreparationHandler() {
         setPreparationThreads(1);
     }
 
     public void init(GraphHopperConfig ghConfig) {
+// ORS-GH MOD START allow overriding fetching of lm profiles in order to use with core profiles
+        init(ghConfig, ghConfig.getLMProfiles());
+    }
+
+    protected void init(GraphHopperConfig ghConfig, List<LMProfile> lmProfiles) {
+// ORS-GH MOD END
         // throw explicit error for deprecated configs
         if (ghConfig.has("prepare.lm.weightings")) {
             throw new IllegalStateException("Use profiles_lm instead of prepare.lm.weightings, see #1922 and docs/core/profiles.md");
         }
 
-        setPreparationThreads(ghConfig.getInt(Parameters.Landmark.PREPARE + "threads", getPreparationThreads()));
-        setLMProfiles(ghConfig.getLMProfiles());
+        setPreparationThreads(ghConfig.getInt(PREPARE + "threads", getPreparationThreads()));
+// ORS-GH MOD START
+        //setLMProfiles(ghConfig.getLMProfiles());
+        setLMProfiles(lmProfiles);
+// ORS-GH MOD END
 
-        landmarkCount = ghConfig.getInt(Parameters.Landmark.COUNT, landmarkCount);
-        logDetails = ghConfig.getBool(Landmark.PREPARE + "log_details", false);
-        minNodes = ghConfig.getInt(Landmark.PREPARE + "min_network_size", -1);
+        landmarkCount = ghConfig.getInt(COUNT, landmarkCount);
+        logDetails = ghConfig.getBool(PREPARE + "log_details", false);
+        minNodes = ghConfig.getInt(PREPARE + "min_network_size", -1);
 
-        for (String loc : ghConfig.getString(Landmark.PREPARE + "suggestions_location", "").split(",")) {
+        for (String loc : ghConfig.getString(PREPARE + "suggestions_location", "").split(",")) {
             if (!loc.trim().isEmpty())
                 lmSuggestionsLocations.add(loc.trim());
         }
@@ -83,7 +106,7 @@ public class LMPreparationHandler {
         if (!isEnabled())
             return;
 
-        String splitAreaLocation = ghConfig.getString(Landmark.PREPARE + "split_area_location", "");
+        String splitAreaLocation = ghConfig.getString(PREPARE + "split_area_location", "");
         JsonFeatureCollection landmarkSplittingFeatureCollection = loadLandmarkSplittingFeatureCollection(splitAreaLocation);
         if (landmarkSplittingFeatureCollection != null && !landmarkSplittingFeatureCollection.getFeatures().isEmpty()) {
             List<SplitArea> splitAreas = landmarkSplittingFeatureCollection.getFeatures().stream()
@@ -137,11 +160,20 @@ public class LMPreparationHandler {
     }
 
     /**
+     * Decouple weightings from PrepareLandmarks as we need weightings for the graphstorage and the
+     * graphstorage for the preparation.
+     */
+    public LMPreparationHandler addLMConfig(LMConfig lmConfig) {
+        lmConfigs.add(lmConfig);
+        return this;
+    }
+
+    /**
      * Loads the landmark data for all given configs if available.
      *
      * @return the loaded landmark storages
      */
-    public List<LandmarkStorage> load(List<LMConfig> lmConfigs, GraphHopperStorage ghStorage) {
+    public List<LandmarkStorage> loadOrDoWork(List<LMConfig> lmConfigs, GraphHopperStorage ghStorage) {
         List<LandmarkStorage> loaded = Collections.synchronizedList(new ArrayList<>());
         List<Callable<String>> loadingCallables = lmConfigs.stream()
                 .map(lmConfig -> (Callable<String>) () -> {
@@ -167,11 +199,23 @@ public class LMPreparationHandler {
         return loaded;
     }
 
+    public boolean hasLMProfiles() {
+        return !lmConfigs.isEmpty();
+    }
+
+    public List<LMConfig> getLMConfigs() {
+        return lmConfigs;
+    }
+
+    public List<PrepareLandmarks> getPreparations() {
+        return preparations;
+    }
+
     /**
      * Prepares the landmark data for all given configs
      */
     public List<PrepareLandmarks> prepare(List<LMConfig> lmConfigs, GraphHopperStorage ghStorage, LocationIndex locationIndex, final boolean closeEarly) {
-        List<PrepareLandmarks> preparations = createPreparations(lmConfigs, ghStorage, locationIndex);
+        createPreparations(ghStorage, locationIndex);
         List<Callable<String>> prepareCallables = new ArrayList<>();
         for (int i = 0; i < preparations.size(); i++) {
             PrepareLandmarks prepare = preparations.get(i);
@@ -196,7 +240,7 @@ public class LMPreparationHandler {
     /**
      * This method creates the landmark storages ready for landmark creation.
      */
-    List<PrepareLandmarks> createPreparations(List<LMConfig> lmConfigs, GraphHopperStorage ghStorage, LocationIndex locationIndex) {
+    public List<PrepareLandmarks> createPreparations(GraphHopperStorage ghStorage, LocationIndex locationIndex) {
         LOGGER.info("Creating LM preparations, {}", getMemInfo());
         List<LandmarkSuggestion> lmSuggestions = new ArrayList<>(lmSuggestionsLocations.size());
         if (!lmSuggestionsLocations.isEmpty()) {
@@ -209,7 +253,12 @@ public class LMPreparationHandler {
             }
         }
 
-        List<PrepareLandmarks> preparations = new ArrayList<>();
+// ORS-GH MOD START abstract to a method in order to facilitate overriding
+        return createPreparationsInternal(ghStorage, lmSuggestions);
+    }
+
+    protected List<PrepareLandmarks> createPreparationsInternal(GraphHopperStorage ghStorage, List<LandmarkSuggestion> lmSuggestions) {
+// ORS-GH MOD END
         for (LMConfig lmConfig : lmConfigs) {
             Double maximumWeight = maximumWeights.get(lmConfig.getName());
             if (maximumWeight == null)
@@ -251,4 +300,18 @@ public class LMPreparationHandler {
             return null;
         }
     }
+
+// ORS-GH MOD START add methods
+    public Map<String, Double> getMaximumWeights() {
+        return maximumWeights;
+    }
+
+    public int getMinNodes() {
+        return minNodes;
+    }
+
+    public boolean getLogDetails() {
+        return logDetails;
+    }
+// ORS-GH MOD END
 }

@@ -19,10 +19,7 @@ package com.graphhopper.routing.ch;
 
 import com.graphhopper.GraphHopperConfig;
 import com.graphhopper.config.CHProfile;
-import com.graphhopper.storage.CHConfig;
-import com.graphhopper.storage.CHStorage;
-import com.graphhopper.storage.GraphHopperStorage;
-import com.graphhopper.storage.RoutingCHGraph;
+import com.graphhopper.storage.*;
 import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.PMap;
 import com.graphhopper.util.Parameters.CH;
@@ -47,8 +44,13 @@ public class CHPreparationHandler {
     // we first add the profiles and later read them to create the config objects (because they require
     // the actual Weightings)
     private final List<CHProfile> chProfiles = new ArrayList<>();
+    private final List<CHConfig> chConfigs = new ArrayList<>();
     private int preparationThreads;
-    private PMap pMap = new PMap();
+// ORS-GH MOD START change visibility private-> protected and allow overriding String constants
+    protected PMap pMap = new PMap();
+    protected static String PREPARE = CH.PREPARE;
+    protected static String DISABLE = CH.DISABLE;
+// ORS-GH MOD END
 
     public CHPreparationHandler() {
         setPreparationThreads(1);
@@ -57,19 +59,46 @@ public class CHPreparationHandler {
     public void init(GraphHopperConfig ghConfig) {
         // throw explicit error for deprecated configs
         if (ghConfig.has("prepare.threads"))
-            throw new IllegalStateException("Use " + CH.PREPARE + "threads instead of prepare.threads");
+            throw new IllegalStateException("Use " + PREPARE + "threads instead of prepare.threads");
         if (ghConfig.has("prepare.chWeighting") || ghConfig.has("prepare.chWeightings") || ghConfig.has("prepare.ch.weightings"))
             throw new IllegalStateException("Use profiles_ch instead of prepare.chWeighting, prepare.chWeightings or prepare.ch.weightings, see #1922 and docs/core/profiles.md");
         if (ghConfig.has("prepare.ch.edge_based"))
             throw new IllegalStateException("Use profiles_ch instead of prepare.ch.edge_based, see #1922 and docs/core/profiles.md");
 
-        setPreparationThreads(ghConfig.getInt(CH.PREPARE + "threads", getPreparationThreads()));
+        setPreparationThreads(ghConfig.getInt(PREPARE + "threads", getPreparationThreads()));
         setCHProfiles(ghConfig.getCHProfiles());
         pMap = ghConfig.asPMap();
     }
 
     public final boolean isEnabled() {
         return !chProfiles.isEmpty();
+    }
+
+    /**
+     * Decouple CH profiles from PrepareContractionHierarchies as we need CH profiles for the
+     * graphstorage and the graphstorage for the preparation.
+     */
+    public CHPreparationHandler addCHConfig(CHConfig chConfig) {
+        chConfigs.add(chConfig);
+        return this;
+    }
+
+    public final boolean hasCHConfigs() {
+        return !chConfigs.isEmpty();
+    }
+
+    public List<CHConfig> getCHConfigs() {
+        return chConfigs;
+    }
+
+    public List<CHConfig> getNodeBasedCHConfigs() {
+        List<CHConfig> result = new ArrayList<>();
+        for (CHConfig chConfig : chConfigs) {
+            if (!chConfig.getTraversalMode().isEdgeBased()) {
+                result.add(chConfig);
+            }
+        }
+        return result;
     }
 
     public CHPreparationHandler setCHProfiles(CHProfile... chProfiles) {
@@ -151,9 +180,29 @@ public class CHPreparationHandler {
         return results;
     }
 
-    private PrepareContractionHierarchies createCHPreparation(GraphHopperStorage ghStorage, CHConfig chConfig) {
+    public void createPreparations(GraphHopperStorage ghStorage) {
+// TODO migration
+//        if (!isEnabled() || !preparations.isEmpty())
+//            return;
+        if (!hasCHConfigs())
+            throw new IllegalStateException("No CH profiles found");
+// TODO migration
+//        LOGGER.info("Creating CH preparations, {}", getMemInfo());
+//        for (CHConfig chConfig : chConfigs) {
+//            addPreparation(createCHPreparation(ghStorage, chConfig));
+//        }
+    }
+
+// ORS-GH MOD START change visibility private-> protected
+    protected PrepareContractionHierarchies createCHPreparation(GraphHopperStorage ghStorage, CHConfig chConfig) {
+// ORS-GH MOD END
         PrepareContractionHierarchies pch = PrepareContractionHierarchies.fromGraphHopperStorage(ghStorage, chConfig);
         pch.setParams(pMap);
         return pch;
+    }
+
+    public GraphHopperStorage getPreparation(String profile) {
+//        TODO migration
+        return null;
     }
 }

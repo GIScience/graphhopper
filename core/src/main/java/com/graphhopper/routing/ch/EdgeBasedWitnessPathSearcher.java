@@ -210,7 +210,9 @@ public class EdgeBasedWitnessPathSearcher {
     private boolean isPathToCenter(int key) {
         return (adjNodesAndIsPathToCenters[key] & 0b01) == 0b01;
     }
-
+    public long getTotalNumSearches() {
+        return stats.numSearches;
+    }
     public void close() {
         prepareGraph.close();
         outEdgeExplorer = null;

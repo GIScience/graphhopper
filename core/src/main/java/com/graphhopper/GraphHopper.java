@@ -76,7 +76,9 @@ import static com.graphhopper.util.Parameters.Algorithms.RoundTrip;
  */
 public class GraphHopper {
     private static final Logger logger = LoggerFactory.getLogger(GraphHopper.class);
-    private final Map<String, Profile> profilesByName = new LinkedHashMap<>();
+// ORS-GH MOD START change access private -> protected
+    protected final Map<String, Profile> profilesByName = new LinkedHashMap<>();
+// ORS-GH MOD END
     private final String fileLockName = "gh.lock";
     // utils
     private final TranslationMap trMap = new TranslationMap().doImport();
@@ -121,6 +123,24 @@ public class GraphHopper {
     private EncodedValueFactory encodedValueFactory = new DefaultEncodedValueFactory();
     private TagParserFactory tagParserFactory = new DefaultTagParserFactory();
     private PathDetailsBuilderFactory pathBuilderFactory = new PathDetailsBuilderFactory();
+
+    // ORS-GH MOD START
+    protected PathProcessorFactory pathProcessorFactory = PathProcessorFactory.DEFAULT;
+    protected WeightingFactory weightingFactory;
+    protected GraphStorageFactory graphStorageFactory;
+
+    public void setPathProcessorFactory(PathProcessorFactory newFactory) {
+        this.pathProcessorFactory = newFactory;
+    }
+
+    public void setWeightingFactory(WeightingFactory weightingFactory) {
+        this.weightingFactory = weightingFactory;
+    }
+
+    public void setGraphStorageFactory(GraphStorageFactory graphStorageFactory) {
+        this.graphStorageFactory = graphStorageFactory;
+    }
+    // ORS-GH MOD END
 
     public EncodingManager.Builder getEncodingManagerBuilder() {
         return emBuilder;
@@ -256,6 +276,18 @@ public class GraphHopper {
         this.elevation = includeElevation;
         return this;
     }
+
+    // ORS-GH MOD START
+    // CALT
+    @Deprecated
+    public boolean isSimplifyResponse() {
+        return getRouterConfig().isSimplifyResponse();
+    }
+
+    public boolean isFullyLoaded() {
+        return fullyLoaded;
+    }
+    // ORS-GH MOD END
 
     public String getGraphHopperLocation() {
         return ghLocation;
@@ -686,7 +718,7 @@ public class GraphHopper {
         AreaIndex<CustomArea> areaIndex = new AreaIndex<>(customAreas);
 
         logger.info("start creating graph from " + osmFile);
-        OSMReader reader = new OSMReader(ghStorage, osmReaderConfig).setFile(_getOSMFile()).
+        OSMReader reader = createOSMReader().setFile(_getOSMFile()).
                 setAreaIndex(areaIndex).
                 setElevationProvider(eleProvider).
                 setCountryRuleFactory(countryRuleFactory);
@@ -701,6 +733,12 @@ public class GraphHopper {
         if (reader.getDataDate() != null)
             ghStorage.getProperties().put("datareader.data.date", f.format(reader.getDataDate()));
     }
+
+    // ORS-GH MOD START add method for overriding
+    protected  OSMReader createOSMReader() {
+        return new OSMReader(ghStorage, osmReaderConfig);
+    }
+    // ORS-GH MOD END
 
     private List<CustomArea> readCustomAreas() {
         ObjectMapper objectMapper = new ObjectMapper();
@@ -867,7 +905,9 @@ public class GraphHopper {
         return chPreparationHandler;
     }
 
-    private List<CHConfig> createCHConfigs(List<CHProfile> chProfiles) {
+// ORS-GH MOD START change access private -> protected
+    protected List<CHConfig> createCHConfigs(List<CHProfile> chProfiles) {
+// ORS-GH MOD END
         List<CHConfig> chConfigs = new ArrayList<>();
         for (CHProfile chProfile : chProfiles) {
             Profile profile = profilesByName.get(chProfile.getProfile());
@@ -927,7 +967,12 @@ public class GraphHopper {
 
         if (chPreparationHandler.isEnabled())
             loadOrPrepareCH(closeEarly);
+// ORS-GH MOD START add post processing hook
+        postProcessingHook(closeEarly);
     }
+
+    protected void postProcessingHook(boolean closeEarly) {}
+// ORS-GH MOD END
 
     protected void importPublicTransit() {
     }
@@ -1015,6 +1060,18 @@ public class GraphHopper {
         ghStorage.getProperties().put("graph.profiles.ch." + profile + ".version", version);
     }
 
+    // ORS-GH MOD START change access private -> protected
+    protected String getProfileVersion(String profile) {
+// ORS-GH MOD END
+        return ghStorage.getProperties().get("graph.profiles.ch." + profile + ".version");
+    }
+
+    // ORS-GH MOD START change access private -> protected
+    protected void setProfileVersion(String profile, int version) {
+// ORS-GH MOD END
+        ghStorage.getProperties().put("graph.profiles.ch." + profile + ".version", version);
+    }
+
     private String getLMProfileVersion(String profile) {
         return ghStorage.getProperties().get("graph.profiles.lm." + profile + ".version");
     }
@@ -1069,7 +1126,7 @@ public class GraphHopper {
 
         // we load landmark storages that already exist and prepare the other ones
         List<LMConfig> lmConfigs = createLMConfigs(lmPreparationHandler.getLMProfiles());
-        List<LandmarkStorage> loaded = lmPreparationHandler.load(lmConfigs, ghStorage);
+        List<LandmarkStorage> loaded = lmPreparationHandler.loadOrDoWork(lmConfigs, ghStorage);
         List<LMConfig> loadedConfigs = loaded.stream().map(LandmarkStorage::getLMConfig).collect(Collectors.toList());
         List<LMConfig> configsToPrepare = lmConfigs.stream().filter(c -> !loadedConfigs.contains(c)).collect(Collectors.toList());
         List<PrepareLandmarks> prepared = prepareLM(closeEarly, configsToPrepare);

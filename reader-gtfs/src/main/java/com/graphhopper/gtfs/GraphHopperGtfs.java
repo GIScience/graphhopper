@@ -21,6 +21,7 @@ package com.graphhopper.gtfs;
 import com.conveyal.gtfs.model.Transfer;
 import com.graphhopper.GraphHopper;
 import com.graphhopper.GraphHopperConfig;
+import com.graphhopper.config.Profile;
 import com.graphhopper.routing.querygraph.QueryGraph;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.GraphHopperStorage;
@@ -43,12 +44,21 @@ public class GraphHopperGtfs extends GraphHopper {
 
     private static final Logger LOGGER = LoggerFactory.getLogger(GraphHopperGtfs.class);
 
-    private final GraphHopperConfig ghConfig;
+    protected GraphHopperConfig ghConfig;
     private GtfsStorage gtfsStorage;
     private PtGraph ptGraph;
 
+    public GraphHopperGtfs() {
+    }
+
     public GraphHopperGtfs(GraphHopperConfig ghConfig) {
         this.ghConfig = ghConfig;
+    }
+
+    public GraphHopper init(GraphHopperConfig ghConfig) {
+        super.init(ghConfig);
+        this.ghConfig = ghConfig;
+        return this;
     }
 
     @Override
@@ -62,6 +72,8 @@ public class GraphHopperGtfs extends GraphHopper {
 
     @Override
     protected void importPublicTransit() {
+        if (!ghConfig.has("gtfs.file"))
+            return;
         ptGraph = new PtGraph(getGraphHopperStorage().getDirectory(), 100);
         gtfsStorage = new GtfsStorage(getGraphHopperStorage().getDirectory());
         LineIntIndex stopIndex = new LineIntIndex(new BBox(-180.0, 180.0, -90.0, 90.0), getGraphHopperStorage().getDirectory(), "stop_index");
@@ -87,7 +99,7 @@ public class GraphHopperGtfs extends GraphHopper {
                     Transfers transfers = new Transfers(gtfsFeed);
                     allTransfers.put(id, transfers);
                     GtfsReader gtfsReader = new GtfsReader(id, getGraphHopperStorage(), ptGraph, ptGraph, getGtfsStorage(), getLocationIndex(), transfers, indexBuilder);
-                    gtfsReader.connectStopsToStreetNetwork();
+                    gtfsReader.connectStopsToStreetNetwork(getProfileStartingWith("foot").getName());
                     LOGGER.info("Building transit graph for feed {}", gtfsFeed.feedId);
                     gtfsReader.buildPtNetwork();
                     allReaders.put(id, gtfsReader);
@@ -109,7 +121,7 @@ public class GraphHopperGtfs extends GraphHopper {
         final int maxTransferWalkTimeSeconds = ghConfig.getInt("gtfs.max_transfer_interpolation_walk_time_seconds", 120);
         GraphHopperStorage graphHopperStorage = getGraphHopperStorage();
         QueryGraph queryGraph = QueryGraph.create(graphHopperStorage, Collections.emptyList());
-        Weighting transferWeighting = createWeighting(getProfile("foot"), new PMap());
+        Weighting transferWeighting = createWeighting(getProfileStartingWith("foot"), new PMap());
         final GraphExplorer graphExplorer = new GraphExplorer(queryGraph, ptGraph, transferWeighting, getGtfsStorage(), RealtimeFeed.empty(), true, true, false, 5.0, false, 0);
         getGtfsStorage().getStationNodes().values().stream().distinct().map(n -> {
             int streetNode = Optional.ofNullable(gtfsStorage.getPtToStreet().get(n)).orElse(-1);
@@ -178,9 +190,17 @@ public class GraphHopperGtfs extends GraphHopper {
         }
     }
 
+    public Profile getProfileStartingWith(String profileName) {
+        for (String profile : profilesByName.keySet()) {
+            if (profile.startsWith(profileName))
+                return profilesByName.get(profile);
+        }
+        return null;
+    }
+
     @Override
     public void close() {
-        getGtfsStorage().close();
+        if (gtfsStorage != null) gtfsStorage.close();
         super.close();
     }
 

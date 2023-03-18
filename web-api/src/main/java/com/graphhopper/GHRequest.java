@@ -73,6 +73,17 @@ public class GHRequest {
         this(new GHPoint(fromLat, fromLon), new GHPoint(toLat, toLon));
     }
 
+    /**
+     * Set routing request from specified startPlace to endPlace with a preferred start and end
+     * heading. Headings are north based azimuth (clockwise) in (0, 360) or NaN for equal preference
+     */
+    public GHRequest(GHPoint startPlace, GHPoint endPlace, double startHeading, double endHeading) {
+        this(startPlace, endPlace);
+        headings = new ArrayList<>(2);
+        headings.add(startHeading);
+        headings.add(endHeading);
+    }
+
     public GHRequest(GHPoint startPlace, GHPoint endPlace) {
         if (startPlace == null)
             throw new IllegalStateException("'from' cannot be null");
@@ -84,6 +95,24 @@ public class GHRequest {
         points.add(startPlace);
         points.add(endPlace);
     }
+
+// ORS-GH MOD START
+    /**
+     * Set routing request
+     *
+     * @param points   List of stopover points in order: start, 1st stop, 2nd stop, ..., end
+     * @param headings List of favored headings for starting (start point) and arrival (via
+     *                 and end points) Headings are north based azimuth (clockwise) in (0, 360) or NaN for equal
+     *                 preference
+     */
+    public GHRequest(List<GHPoint> points, List<Double> headings) {
+        this(points);
+        if (points.size() != headings.size())
+            throw new IllegalArgumentException("Size of headings (" + headings.size()
+                    + ") must match size of points (" + points.size() + ")");
+        this.headings = headings;
+    }
+// ORS-GH MOD END
 
     /**
      * @param points List of stopover points in order: start, 1st stop, 2nd stop, ..., end

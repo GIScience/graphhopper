@@ -71,6 +71,18 @@ class NodeBasedNodeContractor implements NodeContractor {
         meanDegree = prepareGraph.getOriginalEdges() * 1.0 / prepareGraph.getNodes();
     }
 
+// ORS-GH MOD START
+    @Override
+    public void prepareContraction() {
+        // todo: initializing meanDegree here instead of in initFromGraph() means that in the first round of calculating
+        // node priorities all shortcut searches are cancelled immediately and all possible shortcuts are counted because
+        // no witness path can be found. this is not really what we want, but changing it requires re-optimizing the
+        // graph contraction parameters, because it affects the node contraction order.
+        // when this is done there should be no need for this method any longer.
+        meanDegree = prepareGraph.getOriginalEdges() / prepareGraph.getNodes();
+    }
+// ORS-GH MOD END
+
     @Override
     public void close() {
         prepareGraph.close();
@@ -286,6 +298,11 @@ class NodeBasedNodeContractor implements NodeContractor {
     @Override
     public long getAddedShortcutsCount() {
         return addedShortcutsCount;
+    }
+
+    @Override
+    public long getDijkstraCount() {
+        return dijkstraCount;
     }
 
     @Override
