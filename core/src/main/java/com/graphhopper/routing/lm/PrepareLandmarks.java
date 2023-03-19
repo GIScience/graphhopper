@@ -137,6 +137,15 @@ public class PrepareLandmarks {
         return totalPrepareTime;
     }
 
+// ORS-GH MOD START keep old factory function
+    /**
+     * Convenience method to obtain a routing algo factory from the preparation.
+     */
+    public LMRoutingAlgorithmFactory getRoutingAlgorithmFactory() {
+        return new LMRoutingAlgorithmFactory(getLandmarkStorage());
+    }
+// ORS-GH MOD STOP
+
     /**
      * Release landmark storage resources
      */

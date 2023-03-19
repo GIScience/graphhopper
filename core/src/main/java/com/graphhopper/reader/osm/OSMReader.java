@@ -22,22 +22,18 @@ import com.carrotsearch.hppc.LongArrayList;
 import com.graphhopper.coll.GHIntLongHashMap;
 import com.graphhopper.coll.GHLongHashSet;
 import com.graphhopper.coll.GHLongLongHashMap;
+import com.graphhopper.coll.GHLongObjectHashMap;
 import com.graphhopper.reader.*;
 import com.graphhopper.reader.dem.EdgeSampling;
 import com.graphhopper.reader.dem.ElevationProvider;
 import com.graphhopper.reader.dem.GraphElevationSmoothing;
 import com.graphhopper.routing.OSMReaderConfig;
 import com.graphhopper.routing.ev.Country;
-import com.graphhopper.routing.util.AreaIndex;
-import com.graphhopper.routing.util.CustomArea;
-import com.graphhopper.routing.util.EncodingManager;
+import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.util.countryrules.CountryRule;
 import com.graphhopper.routing.util.countryrules.CountryRuleFactory;
 import com.graphhopper.routing.util.parsers.TurnCostParser;
-import com.graphhopper.storage.GraphHopperStorage;
-import com.graphhopper.storage.IntsRef;
-import com.graphhopper.storage.NodeAccess;
-import com.graphhopper.storage.TurnCostStorage;
+import com.graphhopper.storage.*;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
 import com.graphhopper.util.shapes.GHPoint3D;
@@ -88,6 +84,15 @@ public class OSMReader {
     private GHLongHashSet osmWayIdSet = new GHLongHashSet();
     private IntLongMap edgeIdToOsmWayIdMap;
 
+    // ORS-GH MOD - Add variable for identifying which tags from nodes should be stored on their containing ways
+    private Set<String> nodeTagsToStore = new HashSet<>();
+    // ORS-GH MOD - Add variable for storing tags obtained from nodes
+    private GHLongObjectHashMap<Map<String, Object>> osmNodeTagValues;
+
+    protected void initNodeTagsToStore(HashSet<String> nodeTagsToStore) {
+        nodeTagsToStore.addAll(nodeTagsToStore);
+    }
+
     public OSMReader(GraphHopperStorage ghStorage, OSMReaderConfig config) {
         this.ghStorage = ghStorage;
         this.config = config;
@@ -101,7 +106,27 @@ public class OSMReader {
         tempRelFlags = encodingManager.createRelationFlags();
         if (tempRelFlags.length != 2)
             throw new IllegalArgumentException("Cannot use relation flags with != 2 integers");
+
+        // ORS-GH MOD START init
+        osmNodeTagValues = new GHLongObjectHashMap<>(200, .5f);
+        // ORS-GH MOD END
     }
+
+    // ORS-GH MOD START - Method for getting the recorded tags for a node
+    public Map<String, Object> getStoredTagsForNode(long nodeId) {
+        if (osmNodeTagValues.containsKey(nodeId)) {
+            return osmNodeTagValues.get(nodeId);
+        } else {
+            return new HashMap<>();
+        }
+    }
+    // ORS-GH MOD END
+
+    // ORS-GH MOD START - Method for identifying if a node has tas stored for it
+    public boolean nodeHasTagsStored(long nodeId) {
+        return osmNodeTagValues.containsKey(nodeId);
+    }
+    // ORS-GH MOD END
 
     /**
      * Sets the OSM file to be read.  Supported formats include .osm.xml, .osm.gz and .xml.pbf
@@ -164,6 +189,8 @@ public class OSMReader {
         LOGGER.info("Finished reading OSM file: {}, nodes: {}, edges: {}, zero distance edges: {}",
                 osmFile.getAbsolutePath(), nf(ghStorage.getNodes()), nf(ghStorage.getEdges()), nf(zeroCounter));
         finishedReading();
+        if (ghStorage.getNodes() == 0)
+            throw new RuntimeException("Graph after reading OSM must not be empty. Read " + osmWayIdSet.size() + " ways and " + ghStorage.getNodes() + " nodes");
     }
 
     /**
@@ -263,6 +290,68 @@ public class OSMReader {
         // also add all custom areas as artificial tag
         way.setTag("custom_areas", customAreas);
     }
+
+    // ORS-GH MOD START - additional methods
+//    protected void storeConditionalAccess(EncodingManager.AcceptWay acceptWay, List<EdgeIteratorState> createdEdges) {
+//        if (acceptWay.hasConditional()) {
+//            for (FlagEncoder encoder : encodingManager.fetchEdgeEncoders()) {
+//                String encoderName = encoder.toString();
+//                if (acceptWay.getAccess(encoderName).isConditional() && encodingManager.hasEncodedValue(EncodingManager.getKey(encoderName, ConditionalEdges.ACCESS))) {
+//                    String value = ((AbstractFlagEncoder) encoder).getConditionalTagInspector().getTagValue();
+//                    ((GraphHopperStorage) ghStorage).getConditionalAccess(encoderName).addEdges(createdEdges, value);
+//                }
+//            }
+//        }
+//    }
+
+    protected void storeConditionalSpeed(IntsRef edgeFlags, List<EdgeIteratorState> createdEdges) {
+        for (FlagEncoder encoder : encodingManager.fetchEdgeEncoders()) {
+            String encoderName = EncodingManager.getKey(encoder, ConditionalEdges.SPEED);
+
+            if (encodingManager.hasEncodedValue(encoderName) && encodingManager.getBooleanEncodedValue(encoderName).getBool(false, edgeFlags)) {
+                ConditionalSpeedInspector conditionalSpeedInspector = ((AbstractFlagEncoder) encoder).getConditionalSpeedInspector();
+
+                if (conditionalSpeedInspector.hasLazyEvaluatedConditions()) {
+                    String value = conditionalSpeedInspector.getTagValue();
+                    ((GraphHopperStorage) ghStorage).getConditionalSpeed(encoder).addEdges(createdEdges, value);
+                }
+            }
+        }
+    }
+    // ORS-GH MOD END
+
+    // ORS-GH MOD START - code injection method
+    protected void recordExactWayDistance(ReaderWay way, LongArrayList osmNodeIds) {
+        // Code here has to be in the main block as the point for the centre is required by following code statements
+    }
+    // ORS-GH MOD END
+
+    // ORS-GH MOD START - code injection method
+    protected void onProcessWay(ReaderWay way){
+
+    }
+    // ORS-MOD END
+
+    // ORS-GH MOD START - code injection method
+    protected void applyNodeTagsToWay(ReaderWay way) {
+
+    }
+    // ORS-GH MOD END
+
+    // ORS-GH MOD START - code injection method
+    protected void onProcessEdge(ReaderWay way, EdgeIteratorState edge) {
+
+    }
+    // ORS-GH MOD END
+
+    // ORS-GH MOD START - code injection method
+    protected boolean onCreateEdges(ReaderWay way, LongArrayList osmNodeIds, IntsRef wayFlags, List<EdgeIteratorState> createdEdges) {
+        return false;
+    }
+    protected double getElevation(ReaderNode node) {
+        return this.eleProvider.getEle(node);
+    }
+    // ORS-GH MOD END
 
     /**
      * This method is called for each segment an OSM way is split into during the second pass of {@link WaySegmentParser}.
@@ -595,7 +684,7 @@ public class OSMReader {
         return null;
     }
 
-    private void finishedReading() {
+    protected void finishedReading() {
         encodingManager.releaseParsers();
         eleProvider.release();
         osmWayIdToRelationFlagsMap = null;
@@ -613,6 +702,12 @@ public class OSMReader {
     void putRelFlagsMap(long osmId, IntsRef relFlags) {
         long relFlagsAsLong = ((long) relFlags.ints[1] << 32) | (relFlags.ints[0] & 0xFFFFFFFFL);
         osmWayIdToRelationFlagsMap.put(osmId, relFlagsAsLong);
+    }
+
+    // additional method used in OrsOsmReader()
+    // See https://github.com/GIScience/openrouteservice/issues/725
+    public void enforce2D() {
+        distCalc.enforce2D();
     }
 
     @Override

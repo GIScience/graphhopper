@@ -49,6 +49,30 @@ public class ReaderNode extends ReaderElement {
         return lon;
     }
 
+    public double getEle() {
+        Object ele = this.getTags().get("ele");
+        if ( ele == null)
+            return Double.NaN;
+        String value = "";
+        try {
+            value = ((String)ele).trim();
+        } catch (ClassCastException e) {
+            return Double.NaN;
+        }
+        try {
+            return Double.parseDouble(value);
+        } catch (NumberFormatException e) {
+            try {
+                if (value.contains(".")) {
+                    return Double.parseDouble(value.replace(",", ""));
+                }
+                return Double.parseDouble(value.replace(",", "."));
+            } catch (NumberFormatException e2) {
+                return Double.NaN;
+            }
+        }
+    }
+
     @Override
     public String toString() {
         StringBuilder txt = new StringBuilder();
