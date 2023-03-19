@@ -68,10 +68,12 @@ public class PrepareContractionHierarchies {
     public final int nodes;
 // ORS-GH MOD END
     private NodeOrderingProvider nodeOrderingProvider;
-    private int maxLevel;
+// ORS-GH MOD START change access from private to public
+    public int maxLevel;
     // nodes with highest priority come last
-    private MinHeapWithUpdate sortedNodes;
-    private PMap pMap = new PMap();
+    public MinHeapWithUpdate sortedNodes;
+    public PMap pMap = new PMap();
+// ORS-GH MOD END
     private int checkCounter;
     private boolean prepared = false;
 
@@ -79,11 +81,13 @@ public class PrepareContractionHierarchies {
         return new PrepareContractionHierarchies(ghStorage, chConfig);
     }
 
-    private PrepareContractionHierarchies(GraphHopperStorage ghStorage, CHConfig chConfig) {
+// ORS-GH MOD START change access from private to public
+    public PrepareContractionHierarchies(GraphHopperStorage ghStorage, CHConfig chConfig) {
+// ORS-GH MOD END
         graph = ghStorage;
-        if (!graph.isFrozen())
-            throw new IllegalStateException("BaseGraph must be frozen before creating CHs");
-        chStore = ghStorage.createCHStorage(chConfig);
+// ORS-GH MOD START abstract to method in order to allow overriding in ORS
+        chStore = getCHStore(chConfig);
+// ORS-GH MOD END
         chBuilder = new CHStorageBuilder(chStore);
         this.chConfig = chConfig;
         params = Params.forTraversalMode(chConfig.getTraversalMode());
@@ -181,7 +185,9 @@ public class PrepareContractionHierarchies {
         return chConfig.isEdgeBased();
     }
 
-    private void initFromGraph() {
+// ORS-GH MOD START change access from private to public
+    public void initFromGraph() {
+// ORS-GH MOD END
         // todo: this whole chain of initFromGraph() methods is just needed because PrepareContractionHierarchies does
         // not simply prepare contraction hierarchies, but instead it also serves as some kind of 'container' to give
         // access to the preparations in the GraphHopper class. If this was not so we could make this a lot cleaner here,
@@ -221,13 +227,21 @@ public class PrepareContractionHierarchies {
         periodicUpdateSW.start();
         sortedNodes.clear();
         for (int node = 0; node < nodes; node++) {
-            if (isContracted(node))
+// ORS-GH MOD START
+            if (doNotContract(node))
+// ORS-GH MOD END
                 continue;
             float priority = calculatePriority(node);
             sortedNodes.push(node, priority);
         }
         periodicUpdateSW.stop();
     }
+
+// ORS-GH MOD START added method
+    protected boolean doNotContract(int node) {
+        return isContracted(node);
+    }
+// ORS-GH MOD END
 
     private void contractNodesUsingHeuristicNodeOrdering() {
         StopWatch sw = new StopWatch().start();
@@ -298,9 +312,10 @@ public class PrepareContractionHierarchies {
             IntContainer neighbors = contractNode(polledNode, level);
             level++;
 
-            if (sortedNodes.size() < nodesToAvoidContract)
+            if (sortedNodes.size() < nodesToAvoidContract) {
                 // skipped nodes are already set to maxLevel
                 break;
+            }
 
             int neighborCount = 0;
             // there might be multiple edges going to the same neighbor nodes -> only calculate priority once per node
@@ -314,6 +329,10 @@ public class PrepareContractionHierarchies {
                 }
             }
         }
+
+// ORS-GH MOD START add hook
+        finishContractionHook();
+// ORS-GH MOD END
 
         nodeContractor.finishContraction();
 
@@ -334,6 +353,10 @@ public class PrepareContractionHierarchies {
         // The preparation object itself has to be intact to create the algorithm.
         _close();
     }
+
+// ORS-GH MOD START add method
+    public void finishContractionHook() {}
+// ORS-GH MOD END
 
     private void contractNodesUsingFixedNodeOrdering() {
         final int nodesToContract = nodeOrderingProvider.getNumNodes();
@@ -359,7 +382,9 @@ public class PrepareContractionHierarchies {
         }
     }
 
-    private IntContainer contractNode(int node, int level) {
+// ORS-GH MOD START change access from private to protected
+    protected IntContainer contractNode(int node, int level) {
+// ORS-GH MOD END
         if (isContracted(node))
             throw new IllegalArgumentException("Node " + node + " was contracted already");
         contractionSW.start();

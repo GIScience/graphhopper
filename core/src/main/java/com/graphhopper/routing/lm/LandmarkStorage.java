@@ -136,7 +136,7 @@ public class LandmarkStorage {
         // use the node based traversal as this is a smaller weight approximation and will still produce correct results
         // In this sense its even 'better' to use node-based.
         this.traversalMode = TraversalMode.NODE_BASED;
-        this.landmarkWeightDA = dir.create("landmarks_" + lmConfig.getName());
+        this.landmarkWeightDA = dir.create(getLandmarksFileName() + lmConfig.getName());
 
         this.landmarks = landmarks;
         // one short per landmark and two directions => 2*2 byte
@@ -144,8 +144,20 @@ public class LandmarkStorage {
         this.FROM_OFFSET = 0;
         this.TO_OFFSET = 2;
         this.landmarkIDs = new ArrayList<>();
-        this.subnetworkStorage = new SubnetworkStorage(dir.create("landmarks_subnetwork_" + lmConfig.getName()));
+// ORS-GH MOD START
+        this.subnetworkStorage = new SubnetworkStorage(dir.create(getLandmarksSubnetworkFileName() + lmConfig.getName()));
+// ORS-GH MOD END
     }
+
+// ORS-GH MOD START add method which can be overriden by CoreLandmarksStorage
+    public String getLandmarksSubnetworkFileName() {
+        return getLandmarksFileName() + "subnetwork_";
+    }
+    public String getLandmarksFileName() {
+        return "landmarks_";
+    }
+// ORS-GH MOD END
+
     /**
      * Specify the maximum possible value for your used area. With this maximum weight value you can influence the storage
      * precision for your weights that help A* finding its way to the goal. The same value is used for all subnetworks.
