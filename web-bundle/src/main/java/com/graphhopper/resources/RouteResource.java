@@ -22,6 +22,7 @@ import com.graphhopper.GHResponse;
 import com.graphhopper.GraphHopper;
 import com.graphhopper.gpx.GpxConversions;
 import com.graphhopper.http.GHPointParam;
+import com.graphhopper.http.GHRequestTransformer;
 import com.graphhopper.http.ProfileResolver;
 import com.graphhopper.jackson.MultiException;
 import com.graphhopper.jackson.ResponsePathSerializer;
@@ -58,12 +59,14 @@ public class RouteResource {
 
     private final GraphHopper graphHopper;
     private final ProfileResolver profileResolver;
+    private final GHRequestTransformer ghRequestTransformer;
     private final Boolean hasElevation;
 
     @Inject
-    public RouteResource(GraphHopper graphHopper, ProfileResolver profileResolver, @Named("hasElevation") Boolean hasElevation) {
+    public RouteResource(GraphHopper graphHopper, ProfileResolver profileResolver, GHRequestTransformer ghRequestTransformer, @Named("hasElevation") Boolean hasElevation) {
         this.graphHopper = graphHopper;
         this.profileResolver = profileResolver;
+        this.ghRequestTransformer = ghRequestTransformer;
         this.hasElevation = hasElevation;
     }
 
@@ -93,22 +96,18 @@ public class RouteResource {
             @QueryParam("gpx.waypoints") @DefaultValue("false") boolean withWayPoints,
             @QueryParam("gpx.trackname") @DefaultValue("GraphHopper Track") String trackName,
             @QueryParam("gpx.millis") String timeString) {
+        StopWatch sw = new StopWatch().start();
         List<GHPoint> points = pointParams.stream().map(AbstractParam::get).collect(toList());
         boolean writeGPX = "gpx".equalsIgnoreCase(type);
         instructions = writeGPX || instructions;
         if (enableElevation && !hasElevation)
             throw new IllegalArgumentException("Elevation not supported!");
 
-        StopWatch sw = new StopWatch().start();
         GHRequest request = new GHRequest();
         initHints(request.getHints(), uriInfo.getQueryParameters());
-        String weightingVehicleLogStr = "weighting: " + request.getHints().getString("weighting", "") + ", vehicle: " + request.getHints().getString("vehicle", "");
 
-        PMap profileResolverHints = new PMap(request.getHints());
-        profileResolverHints.putObject("profile", profileName);
-        profileResolverHints.putObject("has_curbsides", !curbsides.isEmpty());
-        profileName = profileResolver.resolveProfile(profileResolverHints);
-        removeLegacyParameters(request.getHints());
+        if (minPathElevationPrecision != null)
+            request.getHints().putObject(ELEVATION_WAY_POINT_MAX_DISTANCE, minPathElevationPrecision);
 
         request.setPoints(points).
                 setProfile(profileName).
@@ -124,20 +123,24 @@ public class RouteResource {
                 putObject(INSTRUCTIONS, instructions).
                 putObject(WAY_POINT_MAX_DISTANCE, minPathPrecision);
 
-        if (minPathElevationPrecision != null) {
-            request.getHints().putObject(ELEVATION_WAY_POINT_MAX_DISTANCE, minPathElevationPrecision);
-        }
+        request = ghRequestTransformer.transformRequest(request);
+
+        PMap profileResolverHints = new PMap(request.getHints());
+        profileResolverHints.putObject("profile", profileName);
+        profileResolverHints.putObject("has_curbsides", !curbsides.isEmpty());
+        profileName = profileResolver.resolveProfile(profileResolverHints);
+        removeLegacyParameters(request.getHints());
+        request.setProfile(profileName);
 
         GHResponse ghResponse = graphHopper.route(request);
 
         double took = sw.stop().getMillisDouble();
-        String infoStr = httpReq.getRemoteAddr() + " " + httpReq.getLocale() + " " + httpReq.getHeader("User-Agent");
-        String logStr = httpReq.getQueryString() + " " + infoStr + " " + points + ", took: "
-                + String.format("%.1f", took) + "ms, algo: " + algoStr + ", profile: " + profileName + ", " + weightingVehicleLogStr;
+        String logStr = (httpReq.getRemoteAddr() + " " + httpReq.getLocale() + " " + httpReq.getHeader("User-Agent")) + " " + points + ", took: " + String.format("%.1f", took) + "ms, algo: " + algoStr + ", profile: " + profileName;
 
         if (ghResponse.hasErrors()) {
-            logger.error(logStr + ", errors:" + ghResponse.getErrors());
-            throw new MultiException(ghResponse.getErrors());
+            MultiException ex = new MultiException(ghResponse.getErrors());
+            logger.info(logStr, ex);
+            throw ex;
         } else {
             logger.info(logStr + ", alternatives: " + ghResponse.getAll().size()
                     + ", distance0: " + ghResponse.getBest().getDistance()
@@ -162,6 +165,8 @@ public class RouteResource {
     @Produces(MediaType.APPLICATION_JSON)
     public Response doPost(@NotNull GHRequest request, @Context HttpServletRequest httpReq) {
         StopWatch sw = new StopWatch().start();
+        request = ghRequestTransformer.transformRequest(request);
+
         if (Helper.isEmpty(request.getProfile()) && request.getCustomModel() != null)
             // throw a dedicated exception here, otherwise a missing profile is still caught in Router
             throw new IllegalArgumentException("The 'profile' parameter is required when you use the `custom_model` parameter");
@@ -180,18 +185,14 @@ public class RouteResource {
 
         double took = sw.stop().getMillisDouble();
         String infoStr = httpReq.getRemoteAddr() + " " + httpReq.getLocale() + " " + httpReq.getHeader("User-Agent");
-        String queryString = httpReq.getQueryString() == null ? "" : (httpReq.getQueryString() + " ");
-        // todo: vehicle/weighting will always be empty at this point...
-        String weightingVehicleLogStr = "weighting: " + request.getHints().getString("weighting", "")
-                + ", vehicle: " + request.getHints().getString("vehicle", "");
-        String logStr = queryString + infoStr + " " + request.getPoints().size() + ", took: "
+        String logStr = infoStr + " " + request.getPoints().size() + ", took: "
                 + String.format("%.1f", took) + " ms, algo: " + request.getAlgorithm() + ", profile: " + request.getProfile()
-                + ", " + weightingVehicleLogStr
                 + ", custom_model: " + request.getCustomModel();
 
         if (ghResponse.hasErrors()) {
-            logger.error(logStr + ", errors:" + ghResponse.getErrors());
-            throw new MultiException(ghResponse.getErrors());
+            MultiException ex = new MultiException(ghResponse.getErrors());
+            logger.error(logStr, ex);
+            throw ex;
         } else {
             logger.info(logStr + ", alternatives: " + ghResponse.getAll().size()
                     + ", distance0: " + ghResponse.getBest().getDistance()

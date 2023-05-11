@@ -28,10 +28,12 @@ import com.graphhopper.http.health.GraphHopperHealthCheck;
 import com.graphhopper.isochrone.algorithm.JTSTriangulator;
 import com.graphhopper.isochrone.algorithm.Triangulator;
 import com.graphhopper.jackson.Jackson;
+import com.graphhopper.matching.MapMatching;
 import com.graphhopper.resources.*;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.BaseGraph;
 import com.graphhopper.storage.index.LocationIndex;
+import com.graphhopper.util.PMap;
 import com.graphhopper.util.TranslationMap;
 import com.graphhopper.util.details.PathDetailsBuilderFactory;
 import io.dropwizard.ConfiguredBundle;
@@ -124,41 +126,29 @@ public class GraphHopperBundle implements ConfiguredBundle<GraphHopperBundleConf
         }
     }
 
-    static class LegacyProfileResolverFactory implements Factory<LegacyProfileResolver> {
-
-        @Inject
-        GraphHopper graphHopper;
-
-        @Override
-        public LegacyProfileResolver provide() {
-            return new LegacyProfileResolver(graphHopper.getEncodingManager(),
-                    graphHopper.getProfiles(),
-                    graphHopper.getCHPreparationHandler().getCHProfiles(),
-                    graphHopper.getLMPreparationHandler().getLMProfiles()
-            );
-        }
-
-        @Override
-        public void dispose(LegacyProfileResolver profileResolver) {
-
-        }
-    }
-
     static class ProfileResolverFactory implements Factory<ProfileResolver> {
         @Inject
         GraphHopper graphHopper;
 
-        @Inject
-        LegacyProfileResolver legacyProfileResolver;
-
         @Override
         public ProfileResolver provide() {
-            return new ProfileResolver(graphHopper.getProfiles(), legacyProfileResolver);
+            return new ProfileResolver(graphHopper.getProfiles());
         }
 
         @Override
         public void dispose(ProfileResolver instance) {
 
+        }
+    }
+
+    static class GHRequestTransformerFactory implements Factory<GHRequestTransformer> {
+        @Override
+        public GHRequestTransformer provide() {
+            return req -> req;
+        }
+
+        @Override
+        public void dispose(GHRequestTransformer instance) {
         }
     }
 
@@ -174,6 +164,27 @@ public class GraphHopperBundle implements ConfiguredBundle<GraphHopperBundleConf
 
         @Override
         public void dispose(PathDetailsBuilderFactory profileResolver) {
+
+        }
+    }
+
+    static class MapMatchingRouterFactoryFactory implements Factory<MapMatchingResource.MapMatchingRouterFactory> {
+
+        @Inject
+        GraphHopper graphHopper;
+
+        @Override
+        public MapMatchingResource.MapMatchingRouterFactory provide() {
+            return new MapMatchingResource.MapMatchingRouterFactory() {
+                @Override
+                public MapMatching.Router createMapMatchingRouter(PMap hints) {
+                    return MapMatching.routerFromGraphHopper(graphHopper, hints);
+                }
+            };
+        }
+
+        @Override
+        public void dispose(MapMatchingResource.MapMatchingRouterFactory mapMatchingRouterFactory) {
 
         }
     }
@@ -253,9 +264,10 @@ public class GraphHopperBundle implements ConfiguredBundle<GraphHopperBundleConf
                 bind(graphHopper).to(GraphHopper.class);
 
                 bind(new JTSTriangulator(graphHopper.getRouterConfig())).to(Triangulator.class);
+                bindFactory(MapMatchingRouterFactoryFactory.class).to(MapMatchingResource.MapMatchingRouterFactory.class);
                 bindFactory(PathDetailsBuilderFactoryFactory.class).to(PathDetailsBuilderFactory.class);
-                bindFactory(LegacyProfileResolverFactory.class).to(LegacyProfileResolver.class);
                 bindFactory(ProfileResolverFactory.class).to(ProfileResolver.class);
+                bindFactory(GHRequestTransformerFactory.class).to(GHRequestTransformer.class);
                 bindFactory(HasElevation.class).to(Boolean.class).named("hasElevation");
                 bindFactory(LocationIndexFactory.class).to(LocationIndex.class);
                 bindFactory(TranslationMapFactory.class).to(TranslationMap.class);
