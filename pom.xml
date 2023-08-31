@@ -3,10 +3,10 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
     <modelVersion>4.0.0</modelVersion>
 
-    <groupId>com.graphhopper</groupId>
+    <groupId>com.github.GIScience.graphhopper</groupId>
     <artifactId>graphhopper-parent</artifactId>
     <name>GraphHopper Parent Project</name>
-    <version>4.0-SNAPSHOT</version>
+    <version>4.8.2-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>https://www.graphhopper.com</url>
     <inceptionYear>2012</inceptionYear>
@@ -15,8 +15,9 @@
     <properties>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
         <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-
-        <maven.compiler.target>1.8</maven.compiler.target>
+        <java.version>17</java.version>
+        <maven.compiler.source>${java.version}</maven.compiler.source>
+        <maven.compiler.target>${java.version}</maven.compiler.target>
 
         <org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>4</org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>
         <org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>4</org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>
@@ -80,7 +81,7 @@
         <module>core</module>
         <module>reader-gtfs</module>
         <!-- ORS-GH MOD<module>tools</module> -->
-        <!-- ORS-GH MOD<module>hmm-lib</module> -->
+        <module>hmm-lib</module>
         <module>map-matching</module>
         <!-- ORS-GH MOD<module>web-bundle</module> -->
         <module>web-api</module>
@@ -96,7 +97,7 @@
             <dependency>
                 <groupId>io.dropwizard</groupId>
                 <artifactId>dropwizard-dependencies</artifactId>
-                <version>4.0.1</version>
+                <version>2.0.21</version>
                 <type>pom</type>
                 <scope>import</scope>
             </dependency>
@@ -113,7 +114,7 @@
             <dependency>
                 <groupId>org.locationtech.jts</groupId>
                 <artifactId>jts-core</artifactId>
-                <version>1.19.0</version>
+                <version>1.15.1</version>
             </dependency>
             <dependency>
                 <groupId>com.wdtinc</groupId>
@@ -215,13 +216,7 @@
                     <artifactId>maven-compiler-plugin</artifactId>
                     <version>3.8.1</version>
                     <configuration>
-                        <!--
-                        <compilerArgument>-Xlint:unchecked</compilerArgument>
-                        <compilerArgument>-Xlint:deprecation</compilerArgument>
-                        -->
                         <fork>true</fork>
-                        <source>1.8</source>
-                        <target>1.8</target>
                     </configuration>
                 </plugin>
 
@@ -307,15 +302,53 @@
                     </excludes>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.jfrog.buildinfo</groupId>
+                <artifactId>artifactory-maven-plugin</artifactId>
+                <version>3.6.1</version>
+                <executions>
+                    <execution>
+                        <id>build-info</id>
+                        <goals>
+                            <goal>publish</goal>
+                        </goals>
+                        <configuration>
+                            <artifactory>
+                                <includeEnvVars>true</includeEnvVars>
+                                <envVarsExcludePatterns>*password*,*secret*,*key*,*token*,*passphrase*</envVarsExcludePatterns>
+                                <timeoutSec>60</timeoutSec>
+                            </artifactory>
+                            <publisher>
+                                <contextUrl>https://repo.heigit.org/artifactory</contextUrl>
+                                <username>${env.RT_USERNAME}</username>
+                                <password>${env.RT_PASSWORD}</password>
+                                <excludePatterns>*-tests.jar</excludePatterns>
+                                <repoKey>libs-release-local</repoKey>
+                                <snapshotRepoKey>libs-snapshot-local</snapshotRepoKey>
+                            </publisher>
+                        </configuration>
+                    </execution>
+                </executions>
+            </plugin>
         </plugins>
     </build>
 
     <distributionManagement>
+        <downloadUrl>https://repo.heigit.org/artifactory/</downloadUrl>
         <repository>
-            <id>github</id>
-            <name>GitHub GraphHopper Apache Maven Packages</name>
-            <url>https://maven.pkg.github.com/graphhopper/graphhopper</url>
+            <id>releases</id>
+            <name>HeiGIT repository</name>
+            <uniqueVersion>false</uniqueVersion>
+            <url>https://repo.heigit.org/artifactory/libs-release-local</url>
+            <layout>default</layout>
         </repository>
+        <snapshotRepository>
+            <id>snapshots</id>
+            <name>HeiGIT repository (snapshots)</name>
+            <uniqueVersion>true</uniqueVersion>
+            <url>https://repo.heigit.org/artifactory/libs-snapshot-local</url>
+            <layout>default</layout>
+        </snapshotRepository>
     </distributionManagement>
 
     <!-- mvn clean deploy -P release -->
@@ -341,18 +374,6 @@
                             </execution>
                         </executions>
                     </plugin>
-                    <plugin>
-                        <groupId>org.sonatype.plugins</groupId>
-                        <artifactId>nexus-staging-maven-plugin</artifactId>
-                        <version>1.6.8</version>
-                        <extensions>true</extensions>
-                        <configuration>
-                            <serverId>ossrh</serverId>
-                            <nexusUrl>https://oss.sonatype.org/</nexusUrl>
-                            <autoReleaseAfterClose>true</autoReleaseAfterClose>
-                        </configuration>
-                    </plugin>
-
                     <plugin>
                         <groupId>org.apache.maven.plugins</groupId>
                         <artifactId>maven-javadoc-plugin</artifactId>
