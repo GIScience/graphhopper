@@ -12,7 +12,7 @@
         working seamlessly with OpenStreetMap data.
     </description>
     <parent>
-        <groupId>com.graphhopper</groupId>
+        <groupId>com.github.GIScience.graphhopper</groupId>
         <artifactId>graphhopper-parent</artifactId>
         <version>4.1-SNAPSHOT</version>
     </parent>
@@ -36,7 +36,7 @@
     </licenses>
     <dependencies>
         <dependency>
-            <groupId>com.graphhopper</groupId>
+            <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-web-api</artifactId>
             <version>${project.parent.version}</version>
         </dependency>

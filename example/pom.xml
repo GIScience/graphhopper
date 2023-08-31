@@ -5,19 +5,19 @@
     <modelVersion>4.0.0</modelVersion>
 
     <artifactId>graphhopper-example</artifactId>
-    <version>4.0</version>
+    <version>4.1-SNAPSHOT</version>
     <packaging>jar</packaging>
     <name>GraphHopper Example</name>
 
     <parent>
-        <groupId>com.graphhopper</groupId>
+        <groupId>com.github.GIScience.graphhopper</groupId>
         <artifactId>graphhopper-parent</artifactId>
-        <version>4.0</version>
+        <version>4.1-SNAPSHOT</version>
     </parent>  
 
     <dependencies>
         <dependency>
-            <groupId>com.graphhopper</groupId>
+            <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-core</artifactId>
             <version>${project.parent.version}</version>
         </dependency>
