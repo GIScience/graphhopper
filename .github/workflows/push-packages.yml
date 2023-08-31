@@ -3,7 +3,7 @@ on:
   push:
     branches:
       - 'ors_4.0'
-      - 'release/4.*'
+      - 'releases/v4.*'
   release:
     types: [ published ]
 jobs:
