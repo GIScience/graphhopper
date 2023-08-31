@@ -39,7 +39,7 @@ jobs:
       - name: Build and publish package on snapshot
         if: github.event_name == 'push' && github.event_name != 'release'
         run: |
-          mvn -B -DskipTests -Pskip-shaded-web-jar -Pskip-tools-jar source:jar deploy
+          mvn -B -DskipTests source:jar deploy
         env:
           RT_USERNAME: ${{ secrets.RT_USERNAME }}
           RT_PASSWORD: ${{ secrets.RT_PASSWORD }}
@@ -48,7 +48,7 @@ jobs:
         if: github.event_name == 'release'
         run: |
           mvn versions:set -DnewVersion=${{ github.event.release.tag_name }} -DgenerateBackupPoms=false
-          mvn -B -DskipTests -Pskip-shaded-web-jar -Pskip-tools-jar source:jar deploy
+          mvn -B -DskipTests source:jar deploy
         env:
           RT_USERNAME: ${{ secrets.RT_USERNAME }}
           RT_PASSWORD: ${{ secrets.RT_PASSWORD }}
