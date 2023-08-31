@@ -10,9 +10,9 @@
     <description>Use the GraphHopper routing engine as a web-service</description>
 
     <parent>
-        <groupId>com.graphhopper</groupId>
+        <groupId>com.github.GIScience.graphhopper</groupId>
         <artifactId>graphhopper-parent</artifactId>
-        <version>4.0</version>
+        <version>4.0-SNAPSHOT</version>
     </parent>
     <properties>
         <shade-phase>package</shade-phase>
@@ -30,12 +30,12 @@
         <dependency>
             <groupId>com.graphhopper</groupId>
             <artifactId>graphhopper-web-bundle</artifactId>
-            <version>${project.parent.version}</version>
+            <version>4.0</version>
         </dependency>
         <dependency>
             <groupId>com.graphhopper</groupId>
             <artifactId>graphhopper-nav</artifactId>
-            <version>${project.parent.version}</version>
+            <version>4.0</version>
         </dependency>
 
         <dependency>
@@ -47,12 +47,12 @@
         <dependency>
             <groupId>ch.poole</groupId>
             <artifactId>ConditionalRestrictionParser</artifactId>
-            <version>${crparser.version}</version>
+            <version>0.3.1</version>
         </dependency>
         <dependency>
             <groupId>ch.poole</groupId>
             <artifactId>OpeningHoursParser</artifactId>
-            <version>${ohparser.version}</version>
+            <version>0.25.0</version>
         </dependency>
 
         <dependency>
@@ -66,7 +66,7 @@
         <dependency>
             <groupId>com.graphhopper</groupId>
             <artifactId>directions-api-client-hc</artifactId>
-            <version>${project.parent.version}</version>
+            <version>4.0</version>
             <scope>test</scope>
         </dependency>
 
