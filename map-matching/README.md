@@ -36,7 +36,7 @@ of library functions to get an idea how to use map matching in your own project.
 Use this Maven dependency:
 ```xml
 <dependency>
-    <groupId>com.graphhopper</groupId>
+    <groupId>com.github.GIScience.graphhopper</groupId>
     <artifactId>graphhopper-map-matching</artifactId>
     <version>3.0-SNAPSHOT</version>
 </dependency>
