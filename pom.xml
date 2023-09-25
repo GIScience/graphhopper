@@ -306,20 +306,15 @@
     </build>
 
     <distributionManagement>
-        <downloadUrl>https://repo.heigit.org/artifactory/</downloadUrl>
         <repository>
-            <id>releases</id>
-            <name>HeiGIT repository</name>
-            <uniqueVersion>false</uniqueVersion>
-            <url>https://repo.heigit.org/artifactory/libs-release-local</url>
-            <layout>default</layout>
+            <id>heigit-nexus-releases</id>
+            <name>HeiGIT Releases</name>
+            <url>${env.NEXUS_BASE_URL}/repository/maven-releases/</url>
         </repository>
         <snapshotRepository>
-            <id>snapshots</id>
-            <name>HeiGIT repository (snapshots)</name>
-            <uniqueVersion>true</uniqueVersion>
-            <url>https://repo.heigit.org/artifactory/libs-snapshot-local</url>
-            <layout>default</layout>
+            <id>heigit-nexus-snapshots</id>
+            <name>HeiGIT Snapshots</name>
+            <url>${env.NEXUS_BASE_URL}/repository/maven-snapshots/</url>
         </snapshotRepository>
     </distributionManagement>
 
