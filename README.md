@@ -159,7 +159,7 @@ Embed GraphHopper with OpenStreetMap support into your Java application via the 
 
 ```xml
 <dependency>
-    <groupId>com.graphhopper</groupId>
+    <groupId>com.github.GIScience.graphhopper</groupId>
     <artifactId>graphhopper-core</artifactId>
     <version>[LATEST-VERSION]</version>
 </dependency>

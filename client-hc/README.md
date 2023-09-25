@@ -6,7 +6,7 @@ include the following Maven snippet:
 
 ```xml
 <dependency>
-  <groupId>com.graphhopper</groupId>
+  <groupId>com.github.GIScience.graphhopper</groupId>
   <artifactId>directions-api-client-hc</artifactId>
   <version>[CURRENT-VERSION]</version>
 </dependency>
