@@ -37,6 +37,10 @@ import com.graphhopper.routing.util.parsers.TurnCostParser;
 import com.graphhopper.storage.*;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.GHPoint;
+import me.tongfei.progressbar.DelegatingProgressBarConsumer;
+import me.tongfei.progressbar.ProgressBar;
+import me.tongfei.progressbar.ProgressBarBuilder;
+import me.tongfei.progressbar.ProgressBarStyle;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -291,41 +295,49 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         long relationStart = -1;
         long counter = 1;
         try (OSMInput in = openOsmInputFile(osmFile)) {
-            LongIntMap nodeFilter = getNodeMap();
+            // Initialize the progress bar with the print stream and the style of the progress bar.
+            ProgressBarBuilder progressBar = new ProgressBarBuilder()
+                    .setStyle(ProgressBarStyle.COLORFUL_UNICODE_BAR)
+                    .setUpdateIntervalMillis(10) // slow update for better visualization and less IO. Avoids % calculation for each element.
+                    .setConsumer(new DelegatingProgressBarConsumer(LOGGER::error));
 
-            ReaderElement item;
-            while ((item = in.getNext()) != null) {
-                switch (item.getType()) {
-                    case ReaderElement.NODE:
-                        if (nodeFilter.get(item.getId()) != EMPTY_NODE) {
-                            processNode((ReaderNode) item);
-                        }
-                        break;
+            try (ProgressBar pb = progressBar.setInitialMax(in.getUnprocessedElements()).setTaskName("Building graph").build()) {
+                pb.step();
+                LongIntMap nodeFilter = getNodeMap();
 
-                    case ReaderElement.WAY:
-                        if (wayStart < 0) {
-                            LOGGER.info(nf(counter) + ", now parsing ways");
-                            wayStart = counter;
-                        }
-                        processWay((ReaderWay) item);
-                        break;
-                    case ReaderElement.RELATION:
-                        if (relationStart < 0) {
-                            LOGGER.info(nf(counter) + ", now parsing relations");
-                            relationStart = counter;
-                        }
-                        processRelation((ReaderRelation) item);
-                        break;
-                    case ReaderElement.FILEHEADER:
-                        break;
-                    default:
-                        throw new IllegalStateException("Unknown type " + item.getType());
-                }
-                if (++counter % 200_000_000 == 0) {
-                    LOGGER.info(nf(counter) + ", locs:" + nf(locations) + ", " + Helper.getMemInfo());
+                ReaderElement item;
+                while ((item = in.getNext()) != null) {
+                    switch (item.getType()) {
+                        case ReaderElement.NODE:
+                            if (nodeFilter.get(item.getId()) != EMPTY_NODE) {
+                                processNode((ReaderNode) item);
+                            }
+                            break;
+
+                        case ReaderElement.WAY:
+                            if (wayStart < 0) {
+                                LOGGER.info(nf(counter) + ", now parsing ways");
+                                wayStart = counter;
+                            }
+                            processWay((ReaderWay) item);
+                            break;
+                        case ReaderElement.RELATION:
+                            if (relationStart < 0) {
+                                LOGGER.info(nf(counter) + ", now parsing relations");
+                                relationStart = counter;
+                            }
+                            processRelation((ReaderRelation) item);
+                            break;
+                        case ReaderElement.FILEHEADER:
+                            break;
+                        default:
+                            throw new IllegalStateException("Unknown type " + item.getType());
+                    }
+                    if (++counter % 200_000_000 == 0) {
+                        LOGGER.info(nf(counter) + ", locs:" + nf(locations) + ", " + Helper.getMemInfo());
+                    }
                 }
             }
-
             if (in.getUnprocessedElements() > 0)
                 throw new IllegalStateException("Still unprocessed elements in reader queue " + in.getUnprocessedElements());
 
