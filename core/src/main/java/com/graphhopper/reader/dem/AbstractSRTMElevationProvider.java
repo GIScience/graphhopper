@@ -21,6 +21,8 @@ import com.graphhopper.coll.GHIntObjectHashMap;
 import com.graphhopper.storage.DataAccess;
 import com.graphhopper.util.BitUtil;
 import com.graphhopper.util.Downloader;
+import com.graphhopper.util.ProgressBarLogger;
+import com.graphhopper.util.ProgressListener;
 
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -49,7 +51,11 @@ public abstract class AbstractSRTMElevationProvider extends TileBasedElevationPr
     public AbstractSRTMElevationProvider(String baseUrl, String cacheDir, String downloaderName, int minLat, int maxLat, int defaultWidth) {
         super(cacheDir);
         this.baseUrl = baseUrl;
-        downloader = new Downloader(downloaderName).setTimeout(10000);
+
+        ProgressBarLogger.setLoggerName(AbstractTiffElevationProvider.class.getName());
+        ProgressListener progressListener = ProgressBarLogger.getProgressListener("Download elevation data");
+
+        this.downloader = new Downloader(downloaderName, progressListener).setTimeout(10000);
         this.DEFAULT_WIDTH = defaultWidth;
         this.MIN_LAT = minLat;
         this.MAX_LAT = maxLat;

@@ -32,9 +32,15 @@ public class Downloader {
     private String referrer = "http://graphhopper.com";
     private String acceptEncoding = "gzip, deflate";
     private int timeout = 4000;
+    private final ProgressListener progressListener;
+
+    public Downloader(String userAgent, ProgressListener progressListener) {
+        this.userAgent = userAgent;
+        this.progressListener = progressListener;
+    }
 
     public Downloader(String userAgent) {
-        this.userAgent = userAgent;
+        this(userAgent, null);
     }
 
     public static void main(String[] args) throws IOException {
@@ -113,13 +119,22 @@ public class Downloader {
         HttpURLConnection conn = createConnection(url);
         InputStream iStream = fetch(conn, false);
         int size = 8 * 1024;
+        int contentLength = conn.getContentLength();
         BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(toFile), size);
         InputStream in = new BufferedInputStream(iStream, size);
         try {
             byte[] buffer = new byte[size];
             int numRead;
+            int i = 0;
             while ((numRead = in.read(buffer)) != -1) {
                 writer.write(buffer, 0, numRead);
+                i += numRead;
+                if (progressListener != null)
+                    progressListener.update((int) (100 * i / (double) contentLength));
+            }
+
+            if (progressListener != null) {
+                progressListener.update(100);
             }
         } finally {
             Helper.close(iStream);

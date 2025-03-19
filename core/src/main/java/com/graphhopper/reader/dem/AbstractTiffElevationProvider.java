@@ -19,6 +19,8 @@ package com.graphhopper.reader.dem;
 
 import com.graphhopper.storage.DataAccess;
 import com.graphhopper.util.Downloader;
+import com.graphhopper.util.ProgressBarLogger;
+import com.graphhopper.util.ProgressListener;
 
 import java.awt.image.Raster;
 import java.io.File;
@@ -47,7 +49,11 @@ public abstract class AbstractTiffElevationProvider extends TileBasedElevationPr
     public AbstractTiffElevationProvider(String baseUrl, String cacheDir, String downloaderName, int width, int height, int latDegree, int lonDegree) {
         super(cacheDir);
         this.baseUrl = baseUrl;
-        this.downloader = new Downloader(downloaderName).setTimeout(10000);
+
+        ProgressBarLogger.setLoggerName(AbstractTiffElevationProvider.class.getName());
+        ProgressListener progressListener = ProgressBarLogger.getProgressListener("Download elevation data");
+
+        this.downloader = new Downloader(downloaderName, progressListener).setTimeout(10000);
         this.WIDTH = width;
         this.HEIGHT = height;
         this.LAT_DEGREE = latDegree;
