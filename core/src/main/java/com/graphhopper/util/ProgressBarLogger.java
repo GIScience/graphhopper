@@ -5,6 +5,7 @@ import me.tongfei.progressbar.ProgressBar;
 import me.tongfei.progressbar.ProgressBarBuilder;
 import me.tongfei.progressbar.ProgressBarStyle;
 import org.apache.log4j.Logger;
+import org.apache.logging.log4j.Level;
 import org.apache.logging.log4j.core.Appender;
 import org.apache.logging.log4j.core.LoggerContext;
 import org.apache.logging.log4j.core.appender.ConsoleAppender;
@@ -61,7 +62,7 @@ public class ProgressBarLogger {
             AppenderRef[] refs = new AppenderRef[]{ref};
             LoggerConfig loggerConfig = LoggerConfig.newBuilder()
                     .withAdditivity(false)
-                    .withLevel(CLASS_LOGGER.getLevel().getVersion2Level())
+                    .withLevel(Level.INFO)
                     .withLoggerName(LOGGER_NAME)
                     .withIncludeLocation("true")
                     .withRefs(refs)
