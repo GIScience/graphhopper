@@ -23,6 +23,13 @@ import java.net.URL;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
+import org.apache.hc.client5.http.classic.methods.HttpGet;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpClient;
+import org.apache.hc.client5.http.impl.classic.CloseableHttpResponse;
+import org.apache.hc.client5.http.impl.classic.HttpClients;
+import org.apache.hc.core5.http.HttpEntity;
+import org.apache.hc.core5.http.io.entity.EntityUtils;
+import org.apache.hc.core5.http.Header;
 
 /**
  * @author Peter Karich
@@ -116,30 +123,60 @@ public class Downloader {
     }
 
     public void downloadFile(String url, String toFile) throws IOException {
-        HttpURLConnection conn = createConnection(url);
-        InputStream iStream = fetch(conn, false);
-        int size = 8 * 1024;
-        int contentLength = conn.getContentLength();
-        BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(toFile), size);
-        InputStream in = new BufferedInputStream(iStream, size);
-        try {
-            byte[] buffer = new byte[size];
-            int numRead;
-            int i = 0;
-            while ((numRead = in.read(buffer)) != -1) {
-                writer.write(buffer, 0, numRead);
-                i += numRead;
-                if (progressListener != null)
-                    progressListener.update((int) (100 * i / (double) contentLength));
-            }
+        final int bufferSize = 4096; // 4kB buffer
+        try (CloseableHttpClient httpClient = HttpClients.createDefault()) {
+            HttpGet httpGet = new HttpGet(url);
 
-            if (progressListener != null) {
-                progressListener.update(100);
+            try (CloseableHttpResponse response = httpClient.execute(httpGet)) {
+                int statusCode = response.getCode();
+                if (statusCode < 200 || statusCode >= 300) {
+                    throw new IOException("Server returned HTTP response code: " + statusCode + " for URL: " + url);
+                }
+
+                HttpEntity entity = response.getEntity();
+                if (entity == null) {
+                    throw new IOException("No entity found in response for URL: " + url);
+                }
+
+                long contentLength = entity.getContentLength(); // Länge von der Entity holen
+                if (contentLength <= 0) {
+                    Header lengthHeader = response.getFirstHeader("Content-Length");
+                    if(lengthHeader != null) {
+                        try {
+                            contentLength = Long.parseLong(lengthHeader.getValue());
+                        } catch (NumberFormatException e) {
+                            contentLength = -1;
+                        }
+                    }
+                }
+
+                try (InputStream inputStream = entity.getContent(); // InputStream ist AutoCloseable
+                     BufferedOutputStream outputStream = new BufferedOutputStream(new FileOutputStream(toFile))) {
+
+                    byte[] buffer = new byte[bufferSize];
+                    int numRead;
+                    long totalBytesRead = 0;
+                    int lastPercentage = -1;
+
+                    while ((numRead = inputStream.read(buffer)) != -1) {
+                        outputStream.write(buffer, 0, numRead);
+                        totalBytesRead += numRead;
+
+                        if (progressListener != null && contentLength > 0) {
+                            int currentPercentage = (int) (100 * totalBytesRead / (double) contentLength);
+                            if (currentPercentage > lastPercentage) {
+                                progressListener.update(currentPercentage);
+                                lastPercentage = currentPercentage;
+                            }
+                        }
+                    }
+                    if (progressListener != null && contentLength > 0 && lastPercentage < 100) {
+                        progressListener.update(100);
+                    }
+                } finally {
+                    EntityUtils.consume(entity);
+                }
             }
-        } finally {
-            Helper.close(iStream);
-            Helper.close(writer);
-            Helper.close(in);
         }
     }
 
