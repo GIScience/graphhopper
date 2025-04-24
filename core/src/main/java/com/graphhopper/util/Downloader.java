@@ -17,9 +17,13 @@
  */
 package com.graphhopper.util;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.nio.file.Path;
 import java.util.function.LongConsumer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
@@ -29,6 +33,7 @@ import java.util.zip.InflaterInputStream;
  * @author Peter Karich
  */
 public class Downloader {
+    private static final Logger logger = LoggerFactory.getLogger(Downloader.class);
     private static final int BUFFER_SIZE = 8 * 1024;
     private final String userAgent;
     private String referrer = "http://graphhopper.com";
@@ -111,8 +116,10 @@ public class Downloader {
         InputStream iStream = fetch(conn, false);
         BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(toFile), BUFFER_SIZE);
         InputStream in = new BufferedInputStream(iStream, BUFFER_SIZE);
-        try {
-            in.transferTo(writer);
+        String file = Path.of(toFile).getFileName().toString();
+        logger.info("Downloading {} [{}]", url, conn.getContentLengthLong());
+        try (OutputStream progress = new ProgressOutputStream(writer, "downloading %s ..".formatted(file), conn.getContentLengthLong(), logger::info)) {
+            in.transferTo(progress);
         } finally {
             Helper.close(iStream);
             Helper.close(writer);
