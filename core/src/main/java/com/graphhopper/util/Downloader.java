@@ -20,6 +20,7 @@ package com.graphhopper.util;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.util.function.LongConsumer;
 import java.util.zip.GZIPInputStream;
 import java.util.zip.Inflater;
 import java.util.zip.InflaterInputStream;
@@ -28,6 +29,7 @@ import java.util.zip.InflaterInputStream;
  * @author Peter Karich
  */
 public class Downloader {
+    private static final int BUFFER_SIZE = 8 * 1024;
     private final String userAgent;
     private String referrer = "http://graphhopper.com";
     private String acceptEncoding = "gzip, deflate";
@@ -39,12 +41,7 @@ public class Downloader {
 
     public static void main(String[] args) throws IOException {
         new Downloader("GraphHopper Downloader").downloadAndUnzip("http://graphhopper.com/public/maps/0.1/europe_germany_berlin.ghz", "somefolder",
-                new ProgressListener() {
-                    @Override
-                    public void update(long val) {
-                        System.out.println("progress:" + val);
-                    }
-                });
+                val -> System.out.println("progress:" + val));
     }
 
     public Downloader setTimeout(int timeout) {
@@ -80,9 +77,9 @@ public class Downloader {
         try {
             String encoding = connection.getContentEncoding();
             if (encoding != null && encoding.equalsIgnoreCase("gzip"))
-                is = new GZIPInputStream(is);
+                is = new GZIPInputStream(is, BUFFER_SIZE);
             else if (encoding != null && encoding.equalsIgnoreCase("deflate"))
-                is = new InflaterInputStream(is, new Inflater(true));
+                is = new InflaterInputStream(is, new Inflater(true), BUFFER_SIZE);
         } catch (IOException ex) {
         }
 
@@ -90,7 +87,7 @@ public class Downloader {
     }
 
     public InputStream fetch(String url) throws IOException {
-        return fetch((HttpURLConnection) createConnection(url), false);
+        return fetch(createConnection(url), false);
     }
 
     public HttpURLConnection createConnection(String urlStr) throws IOException {
@@ -112,15 +109,10 @@ public class Downloader {
     public void downloadFile(String url, String toFile) throws IOException {
         HttpURLConnection conn = createConnection(url);
         InputStream iStream = fetch(conn, false);
-        int size = 8 * 1024;
-        BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(toFile), size);
-        InputStream in = new BufferedInputStream(iStream, size);
+        BufferedOutputStream writer = new BufferedOutputStream(new FileOutputStream(toFile), BUFFER_SIZE);
+        InputStream in = new BufferedInputStream(iStream, BUFFER_SIZE);
         try {
-            byte[] buffer = new byte[size];
-            int numRead;
-            while ((numRead = in.read(buffer)) != -1) {
-                writer.write(buffer, 0, numRead);
-            }
+            in.transferTo(writer);
         } finally {
             Helper.close(iStream);
             Helper.close(writer);
@@ -128,20 +120,15 @@ public class Downloader {
         }
     }
 
-    public void downloadAndUnzip(String url, String toFolder, final ProgressListener progressListener) throws IOException {
+    public void downloadAndUnzip(String url, String toFolder, final LongConsumer progressListener) throws IOException {
         HttpURLConnection conn = createConnection(url);
         final int length = conn.getContentLength();
         InputStream iStream = fetch(conn, false);
 
-        new Unzipper().unzip(iStream, new File(toFolder), new ProgressListener() {
-            @Override
-            public void update(long sumBytes) {
-                progressListener.update((int) (100 * sumBytes / length));
-            }
-        });
+        new Unzipper().unzip(iStream, new File(toFolder), sumBytes -> progressListener.accept((int) (100 * sumBytes / length)));
     }
 
     public String downloadAsString(String url, boolean readErrorStreamNoException) throws IOException {
-        return Helper.isToString(fetch((HttpURLConnection) createConnection(url), readErrorStreamNoException));
+        return Helper.isToString(fetch(createConnection(url), readErrorStreamNoException));
     }
 }
