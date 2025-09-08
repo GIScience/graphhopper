@@ -201,6 +201,11 @@ public class CustomModelParser {
     private static String getVariableDeclaration(EncodedValueLookup lookup, String arg) {
         if (lookup.hasEncodedValue(arg)) {
             EncodedValue enc = lookup.getEncodedValue(arg, EncodedValue.class);
+            // ORS MOD: SparseEncodedValues are not really encoded values, but are built to behave like them
+            if (enc.getClass().getSimpleName().contains("Sparse")) {
+                return "Object " + arg + " = ((SparseEncodedValue) this." + arg + "_enc).get(edge.getEdge());\n";
+            }
+            // ORS MOD END
             return getReturnType(enc) + " " + arg + " = reverse ? " +
                     "edge.getReverse((" + getInterface(enc) + ") this." + arg + "_enc) : " +
                     "edge.get((" + getInterface(enc) + ") this." + arg + "_enc);\n";

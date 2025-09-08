@@ -435,7 +435,7 @@ public class EncodingManager implements EncodedValueLookup {
         edgeEncoders.add(encoder);
     }
 
-    private void addEncodedValue(EncodedValue ev, boolean withNamespace) {
+    public void addEncodedValue(EncodedValue ev, boolean withNamespace) {
         String normalizedKey = ev.getName().replaceAll(SPECIAL_SEPARATOR, "_");
         if (hasEncodedValue(normalizedKey))
             throw new IllegalStateException("EncodedValue " + ev.getName() + " collides with " + normalizedKey);
