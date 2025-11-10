@@ -255,6 +255,11 @@ public class InstructionsFromEdges implements Path.EdgeVisitor {
                     .setDirOfRotation(deltaOut)
                     .setExited();
 
+            // ORS-GH MOD START - additional instruction after exiting roundabout
+            prevInstruction = new Instruction(Instruction.CONTINUE_ON_STREET, name, new PointList(10, nodeAccess.is3D()));
+            ways.add(prevInstruction);
+            // ORS-GH MOD END
+
             prevInstructionName = prevName;
             prevName = name;
 
