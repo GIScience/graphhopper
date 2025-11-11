@@ -235,6 +235,7 @@ public class PathTest {
             List<String> tmpList = getTurnDescriptions(wayList);
             assertEquals(Arrays.asList("continue onto MainStreet 1 2",
                     "At roundabout, take exit 3 onto 5-8",
+                    "continue onto 5-8",
                     "arrive at destination"),
                     tmpList);
             // Test Radian
@@ -249,6 +250,7 @@ public class PathTest {
             tmpList = getTurnDescriptions(wayList);
             assertEquals(Arrays.asList("continue onto MainStreet 1 2",
                     "At roundabout, take exit 2 onto MainStreet 4 7",
+                    "continue onto MainStreet 4 7",
                     "arrive at destination"),
                     tmpList);
             // Test Radian
@@ -267,6 +269,7 @@ public class PathTest {
         InstructionList wayList = InstructionsFromEdges.calcInstructions(p, p.graph, weighting, mixedEncoders, tr);
         List<String> tmpList = getTurnDescriptions(wayList);
         assertEquals(Arrays.asList("At roundabout, take exit 3 onto 5-8",
+                "continue onto 5-8",
                 "arrive at destination"),
                 tmpList);
     }
@@ -282,6 +285,7 @@ public class PathTest {
         List<String> tmpList = getTurnDescriptions(wayList);
         assertEquals(Arrays.asList("continue onto 3-6",
                 "At roundabout, take exit 3 onto 5-8",
+                "continue onto 5-8",
                 "arrive at destination"),
                 tmpList);
         roundaboutGraph.inverse3to9();
@@ -473,6 +477,7 @@ public class PathTest {
         List<String> tmpList = getTurnDescriptions(wayList);
         assertEquals(Arrays.asList("continue onto MainStreet 1 2",
                 "At roundabout, take exit 2 onto 5-8",
+                "continue onto 5-8",
                 "arrive at destination"),
                 tmpList);
         // Test Radian
@@ -552,6 +557,7 @@ public class PathTest {
         InstructionList wayList = InstructionsFromEdges.calcInstructions(p, p.graph, weighting, carManager, tr);
         List<String> tmpList = getTurnDescriptions(wayList);
         assertEquals(Arrays.asList("At roundabout, take exit 1 onto MainStreet 1 11",
+                "continue onto MainStreet 1 11",
                 "arrive at destination"),
                 tmpList);
     }
@@ -567,6 +573,7 @@ public class PathTest {
         List<String> tmpList = getTurnDescriptions(wayList);
         assertEquals(Arrays.asList("continue onto MainStreet 1 2",
                 "At roundabout, take exit 1 onto 5-8",
+                "continue onto 5-8",
                 "arrive at destination"),
                 tmpList);
         // Test Radian

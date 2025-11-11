@@ -198,14 +198,14 @@ public class GraphHopperTest {
         // no simplification
         hopper.getRouterConfig().setSimplifyResponse(false);
         GHResponse routeRsp = hopper.route(request);
-        assertEquals(10, routeRsp.getBest().getInstructions().size());
+        assertEquals(11, routeRsp.getBest().getInstructions().size());
         assertEquals(43, routeRsp.getBest().getPoints().size());
 
         // with simplification
         hopper.getRouterConfig().setSimplifyResponse(true);
         routeRsp = hopper.route(request);
-        assertEquals(10, routeRsp.getBest().getInstructions().size());
-        assertEquals(39, routeRsp.getBest().getPoints().size());
+        assertEquals(11, routeRsp.getBest().getInstructions().size());
+        assertEquals(41, routeRsp.getBest().getPoints().size());
 
         // no instructions
         request.getHints().putObject("instructions", false);
