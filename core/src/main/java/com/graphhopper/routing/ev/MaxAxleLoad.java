@@ -29,6 +29,9 @@ public class MaxAxleLoad {
      * it was done with the MappedDecimalEncodedValue still handling (or rounding) of unknown values is unclear.
      */
     public static DecimalEncodedValue create() {
-        return new UnsignedDecimalEncodedValue(KEY, 7, 0.5, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD START: increased precision and range to match former ORS behavior
+        // 9 bits with factor 0.1 allows to store values from 0.1 to 51.1 tons
+        return new UnsignedDecimalEncodedValue(KEY, 9, 0.1, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD END
     }
 }

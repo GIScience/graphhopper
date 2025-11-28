@@ -33,6 +33,9 @@ public class MaxWeight {
      * it was done with the MappedDecimalEncodedValue still handling (or rounding) of unknown values is unclear.
      */
     public static DecimalEncodedValue create() {
-        return new UnsignedDecimalEncodedValue(KEY, 8, 0.1, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD START: increased precision and range to match former ORS behavior
+        // 11 bits with factor 0.1 allows to store values from 0.1 to 204.7 tons
+        return new UnsignedDecimalEncodedValue(KEY, 11, 0.1, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD END
     }
 }

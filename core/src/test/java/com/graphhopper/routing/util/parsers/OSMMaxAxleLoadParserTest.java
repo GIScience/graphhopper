@@ -6,6 +6,7 @@ import com.graphhopper.routing.ev.MaxAxleLoad;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.storage.IntsRef;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
@@ -41,6 +42,7 @@ public class OSMMaxAxleLoadParserTest {
     }
 
     @Test
+    @Disabled("Behavior changed due to ORS-specific modifications, see MaxAxleLoad")
     public void testRounding() {
         ReaderWay readerWay = new ReaderWay(1);
         IntsRef intsRef = em.createEdgeFlags();

@@ -32,6 +32,9 @@ public class MaxLength {
      * between the maximum and infinity it is assumed to use the maximum value.
      */
     public static DecimalEncodedValue create() {
-        return new UnsignedDecimalEncodedValue(KEY, 7, 0.1, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD START: increased precision and range to match former ORS behavior
+        // 9 bits with factor 0.1 allows to store values from 0.1 to 51.1 meters
+        return new UnsignedDecimalEncodedValue(KEY, 9, 0.1, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD END
     }
 }

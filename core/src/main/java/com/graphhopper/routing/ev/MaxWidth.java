@@ -32,6 +32,9 @@ public class MaxWidth {
      * it is assumed to use the maximum value.
      */
     public static DecimalEncodedValue create() {
-        return new UnsignedDecimalEncodedValue(KEY, 7, 0.1, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD START: increased precision to match former ORS behavior
+        // 10 bits with factor 0.01 allows to store values from 0.01 to 10.23 meters
+        return new UnsignedDecimalEncodedValue(KEY, 10, 0.01, Double.POSITIVE_INFINITY, false);
+        // ORS-GH MOD END
     }
 }
