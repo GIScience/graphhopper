@@ -20,6 +20,7 @@ package com.graphhopper.util.shapes;
 import com.graphhopper.util.DistanceCalc;
 import com.graphhopper.util.DistanceCalcEarth;
 import com.graphhopper.util.PointList;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -47,6 +48,21 @@ public class BBoxTest {
         assertTrue(new BBox(1, 2, 0, 1).contains(new BBox(1, 2, 0, 1)));
         assertTrue(new BBox(1, 2, 0, 1).contains(new BBox(1.5, 2, 0.5, 1)));
         assertFalse(new BBox(1, 2, 0, 0.5).contains(new BBox(1.5, 2, 0.5, 1)));
+    }
+
+    @Test
+    @DisplayName("Given a BBox, when contains(primitives) is called with coordinates fully inside, then returns true; when outside, then returns false")
+    public void testContainsPrimitives() {
+        BBox outer = new BBox(1, 3, 0, 2);          // minLon=1, maxLon=3, minLat=0, maxLat=2
+
+        // contained box: identical bounds → true
+        assertTrue(outer.contains(1.0, 3.0, 0.0, 2.0));
+        // strict inner box → true
+        assertTrue(outer.contains(1.5, 2.5, 0.5, 1.5));
+        // partially outside (maxLat overflow) → false
+        assertFalse(outer.contains(1.5, 2.5, 0.5, 2.5));
+        // completely outside → false
+        assertFalse(outer.contains(5.0, 6.0, 5.0, 6.0));
     }
 
     @Test

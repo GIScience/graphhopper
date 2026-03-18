@@ -190,6 +190,16 @@ public class BBox implements Shape, Cloneable {
         return maxLat >= b.maxLat && minLat <= b.minLat && maxLon >= b.maxLon && minLon <= b.minLon;
     }
 
+    /**
+     * Returns true if this BBox fully contains the box described by the given coordinates.
+     * Parameter ordering follows the BBox constructor convention: minLon, maxLon, minLat, maxLat.
+     * This is the primitive-based (zero-allocation) equivalent of {@link #contains(BBox)}.
+     */
+    public boolean contains(double minLon, double maxLon, double minLat, double maxLat) {
+        return this.maxLat >= maxLat && this.minLat <= minLat
+                && this.maxLon >= maxLon && this.minLon <= minLon;
+    }
+
     @Override
     public String toString() {
         String str = minLon + "," + maxLon + "," + minLat + "," + maxLat;

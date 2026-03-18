@@ -210,15 +210,27 @@ public class LineIntIndex {
             int[] pixelXY = keyAlgo.decode(cellIndex);
             double tmpMinLon = minLon + deltaLonPerDepth * pixelXY[0];
             double tmpMinLat = minLat + deltaLatPerDepth * pixelXY[1];
+            double tmpMaxLon = tmpMinLon + deltaLonPerDepth;
+            double tmpMaxLat = tmpMinLat + deltaLatPerDepth;
 
-            BBox bbox = (queryBBox != null || function.isTileInfo()) ? new BBox(tmpMinLon, tmpMinLon + deltaLonPerDepth, tmpMinLat, tmpMinLat + deltaLatPerDepth) : null;
-            if (function.isTileInfo())
+            if (function.isTileInfo()) {
+                // Tile-info path (debug/visualisation only): allocate BBox as before
+                BBox bbox = new BBox(tmpMinLon, tmpMaxLon, tmpMinLat, tmpMaxLat);
                 function.onTile(bbox, depth);
-            if (queryBBox == null || queryBBox.contains(bbox)) {
-                // fill without a restriction!
-                query(nextIntPointer, null, tmpMinLat, tmpMinLon, deltaLatPerDepth, deltaLonPerDepth, function, depth + 1);
-            } else if (queryBBox.intersects(bbox)) {
-                query(nextIntPointer, queryBBox, tmpMinLat, tmpMinLon, deltaLatPerDepth, deltaLonPerDepth, function, depth + 1);
+                if (queryBBox == null || queryBBox.contains(bbox)) {
+                    // fill without a restriction!
+                    query(nextIntPointer, null, tmpMinLat, tmpMinLon, deltaLatPerDepth, deltaLonPerDepth, function, depth + 1);
+                } else if (queryBBox.intersects(bbox)) {
+                    query(nextIntPointer, queryBBox, tmpMinLat, tmpMinLon, deltaLatPerDepth, deltaLonPerDepth, function, depth + 1);
+                }
+            } else {
+                // Production path: zero-allocation primitive comparisons
+                if (queryBBox == null || queryBBox.contains(tmpMinLon, tmpMaxLon, tmpMinLat, tmpMaxLat)) {
+                    // fill without a restriction!
+                    query(nextIntPointer, null, tmpMinLat, tmpMinLon, deltaLatPerDepth, deltaLonPerDepth, function, depth + 1);
+                } else if (queryBBox.intersects(tmpMinLon, tmpMaxLon, tmpMinLat, tmpMaxLat)) {
+                    query(nextIntPointer, queryBBox, tmpMinLat, tmpMinLon, deltaLatPerDepth, deltaLonPerDepth, function, depth + 1);
+                }
             }
         }
     }
