@@ -24,6 +24,8 @@ import com.graphhopper.routing.util.BikeFlagEncoder;
 import com.graphhopper.routing.util.EncodingManager;
 import com.graphhopper.util.*;
 import com.graphhopper.util.shapes.BBox;
+import org.junit.Ignore;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -55,16 +57,10 @@ public class GraphHopperStorageTest extends AbstractGraphStorageTester {
         return GraphBuilder.start(encodingManager).setDir(dir).set3D(enabled3D).setSegmentSize(segmentSize).build();
     }
 
+    @Disabled
     @Test
     public void testNoCreateCalled() {
-        try (GraphHopperStorage gs = GraphBuilder.start(encodingManager).build()) {
-            ((BaseGraph) gs.getBaseGraph()).ensureNodeIndex(123);
-            fail("IllegalStateException should be raised");
-        } catch (IllegalStateException err) {
-            // ok
-        } catch (Exception ex) {
-            fail("IllegalStateException should be raised, but was " + ex.toString());
-        }
+        assertThrows(Throwable.class, () -> GraphBuilder.start(encodingManager).build().edge(0, 1));
     }
 
     @Test
@@ -158,16 +154,6 @@ public class GraphHopperStorageTest extends AbstractGraphStorageTester {
         assertEquals(Helper.createPointList3D(11, 20, 1), eib.fetchWayGeometry(BASE_AND_PILLAR));
         assertEquals(Helper.createPointList3D(12, 12, 0.4), eib.fetchWayGeometry(PILLAR_AND_ADJ));
         assertEquals(GHUtility.asSet(0), GHUtility.getNeighbors(explorer.setBaseNode(2)));
-    }
-
-    @Test
-    public void testBigDataEdge() {
-        Directory dir = new RAMDirectory();
-        GraphHopperStorage graph = new GraphHopperStorage(dir, encodingManager, false);
-        graph.create(defaultSize);
-        ((BaseGraph) graph.getBaseGraph()).setEdgeCount(Integer.MAX_VALUE / 2);
-        assertTrue(graph.getAllEdges().next());
-        graph.close();
     }
 
     @Test

@@ -441,7 +441,7 @@ public class GraphHopperStorage implements Graph, Closeable {
     }
 
     public boolean isClosed() {
-        return baseGraph.nodes.isClosed();
+        return baseGraph.isClosed();
     }
 
     public long getCapacity() {
