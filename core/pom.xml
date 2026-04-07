@@ -5,7 +5,7 @@
 
     <artifactId>graphhopper-core</artifactId>
     <name>GraphHopper Core</name>
-    <version>4.11-SNAPSHOT</version>
+    <version>4.12-SNAPSHOT</version>
     <packaging>jar</packaging>
     <description>
         GraphHopper is a fast and memory efficient Java road routing engine
@@ -14,7 +14,7 @@
     <parent>
         <groupId>com.github.GIScience.graphhopper</groupId>
         <artifactId>graphhopper-parent</artifactId>
-        <version>4.11-SNAPSHOT</version>
+        <version>4.12-SNAPSHOT</version>
     </parent>
 
     <properties>
@@ -38,7 +38,7 @@
         <dependency>
             <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-web-api</artifactId>
-            <version>4.11-SNAPSHOT</version>
+            <version>4.12-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.carrotsearch</groupId>
