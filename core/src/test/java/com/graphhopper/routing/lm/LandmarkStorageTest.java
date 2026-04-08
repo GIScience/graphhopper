@@ -107,6 +107,14 @@ public class LandmarkStorageTest {
         assertEquals(65534, lms.getFromWeight(0, 0));
         lms.setWeight(0, 79999);
         assertEquals(65534, lms.getFromWeight(0, 0));
+
+        lms._getInternalDA().setInt(0, Integer.MAX_VALUE);
+        assertTrue(lms.isInfinity(0));
+        // for infinity return much bigger value
+        // assertEquals(Integer.MAX_VALUE, lms.getFromWeight(0, 0));
+
+        lms.setWeight(0, 79999);
+        assertFalse(lms.isInfinity(0));
     }
 
     @Test
