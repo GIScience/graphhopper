@@ -27,6 +27,7 @@ import com.graphhopper.reader.ReaderRelation;
 import com.graphhopper.reader.ReaderWay;
 import com.graphhopper.reader.dem.ElevationProvider;
 import com.graphhopper.reader.dem.SRTMProvider;
+import com.graphhopper.routing.OSMReaderConfig;
 import com.graphhopper.routing.ev.*;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.util.countryrules.CountryRuleFactory;
@@ -452,7 +453,7 @@ public class OSMReaderTest {
     public void testRelation() {
         EncodingManager manager = EncodingManager.create("bike");
         GraphHopperStorage ghStorage = new GraphHopperStorage(new RAMDirectory(), manager, false);
-        OSMReader reader = new OSMReader(ghStorage);
+        OSMReader reader = new OSMReader(ghStorage, new OSMReaderConfig());
         ReaderRelation osmRel = new ReaderRelation(1);
         osmRel.add(new ReaderRelation.Member(ReaderRelation.WAY, 1, ""));
         osmRel.add(new ReaderRelation.Member(ReaderRelation.WAY, 2, ""));
@@ -605,7 +606,7 @@ public class OSMReaderTest {
         lonMap.put(1, 1.0d);
         lonMap.put(2, 1.0d);
 
-        OSMReader osmreader = new OSMReader(ghStorage) {
+        OSMReader osmreader = new OSMReader(ghStorage, new OSMReaderConfig()) {
             // mock data access
             @Override
             // ORS-GH MOD - change access level due to change in superclass
@@ -620,7 +621,7 @@ public class OSMReaderTest {
             }
 
             @Override
-            public Collection<EdgeIteratorState> addOSMWay(LongIndexedContainer osmNodeIds, IntsRef wayFlags, long osmId) {
+            public Collection<EdgeIteratorState> addOSMWay(LongIndexedContainer osmNodeIds, IntsRef wayFlags, ReaderWay way) {
                 return Collections.emptyList();
             }
         };
@@ -927,7 +928,7 @@ public class OSMReaderTest {
         EncodingManager em = EncodingManager.create("car");
         EnumEncodedValue<RoadAccess> roadAccessEnc = em.getEnumEncodedValue(RoadAccess.KEY, RoadAccess.class);
         GraphHopperStorage graph = new GraphBuilder(em).build();
-        OSMReader reader = new OSMReader(graph);
+        OSMReader reader = new OSMReader(graph, new OSMReaderConfig());
         reader.setCountryRuleFactory(new CountryRuleFactory());
         reader.setAreaIndex(createCountryIndex());
         // there are two edges, both with highway=track, one in Berlin, one in Paris

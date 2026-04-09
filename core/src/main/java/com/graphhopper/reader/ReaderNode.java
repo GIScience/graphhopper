@@ -74,7 +74,7 @@ public class ReaderNode extends ReaderElement {
         txt.append(getLat());
         txt.append(" lon=");
         txt.append(getLon());
-        if (!getTags().isEmpty()) {
+        if (hasTags()) {
             txt.append("\n");
             txt.append(tagsToString());
         }

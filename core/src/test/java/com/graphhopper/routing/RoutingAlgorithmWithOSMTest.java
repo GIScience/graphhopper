@@ -33,6 +33,7 @@ import com.graphhopper.util.Helper;
 import com.graphhopper.util.shapes.GHPoint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -599,7 +600,7 @@ public class RoutingAlgorithmWithOSMTest {
     @Test
     public void testMonacoParallel() throws InterruptedException {
         GraphHopper hopper = createHopper(MONACO, new Profile("car").setVehicle("car").setWeighting("shortest"));
-        hopper.setWayPointMaxDistance(0);
+        hopper.getReaderConfig().setMaxWayPointDistance(0);
         hopper.getRouterConfig().setSimplifyResponse(false);
         hopper.importOrLoad();
         final List<Query> queries = createMonacoCarQueries();
@@ -687,7 +688,7 @@ public class RoutingAlgorithmWithOSMTest {
                 setGraphHopperLocation(GH_LOCATION);
         hopper.getRouterConfig().setSimplifyResponse(false);
         hopper.setMinNetworkSize(0);
-        hopper.setWayPointMaxDistance(0);
+        hopper.getReaderConfig().setMaxWayPointDistance(0);
         hopper.getLMPreparationHandler().setLMProfiles(new LMProfile(profiles[0].getName()));
         hopper.getCHPreparationHandler().setCHProfiles(new CHProfile(profiles[0].getName()));
         return hopper;
