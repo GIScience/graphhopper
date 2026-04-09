@@ -36,6 +36,7 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.Reader;
+import java.net.URL;
 import java.util.*;
 import java.util.concurrent.ExecutorCompletionService;
 import java.util.concurrent.ExecutorService;
@@ -92,7 +93,6 @@ public class LMPreparationHandler {
 
         setPreparationThreads(ghConfig.getInt(PREPARE + "threads", getPreparationThreads()));
 // ORS-GH MOD START
-        //setLMProfiles(ghConfig.getLMProfiles());
         setLMProfiles(lmProfiles);
 // ORS-GH MOD END
 
@@ -136,7 +136,6 @@ public class LMPreparationHandler {
      */
     public void setPreparationThreads(int preparationThreads) {
         this.preparationThreads = preparationThreads;
-        LOGGER.info("Using {} threads for lm preparation threads", preparationThreads);
         this.threadPool = java.util.concurrent.Executors.newFixedThreadPool(preparationThreads);
     }
 
@@ -314,11 +313,16 @@ public class LMPreparationHandler {
     private JsonFeatureCollection loadLandmarkSplittingFeatureCollection(String splitAreaLocation) {
         ObjectMapper objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JtsModule());
+        URL builtinSplittingFile = LandmarkStorage.class.getResource("map.geo.json");
         try (Reader reader = splitAreaLocation.isEmpty() ?
-                new InputStreamReader(LandmarkStorage.class.getResource("map.geo.json").openStream(), UTF_CS) :
+                new InputStreamReader(builtinSplittingFile.openStream(), UTF_CS) :
                 new InputStreamReader(new FileInputStream(splitAreaLocation), UTF_CS)) {
             JsonFeatureCollection result = objectMapper.readValue(reader, JsonFeatureCollection.class);
-            LOGGER.info("Loaded landmark splitting collection from " + splitAreaLocation);
+            if (splitAreaLocation.isEmpty()) {
+                LOGGER.info("Loaded built-in landmark splitting collection from {}", builtinSplittingFile);
+            } else {
+                LOGGER.info("Loaded landmark splitting collection from {}", splitAreaLocation);
+            }
             return result;
         } catch (IOException e) {
             LOGGER.error("Problem while reading border map GeoJSON. Skipping this.", e);
