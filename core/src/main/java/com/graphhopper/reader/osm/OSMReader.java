@@ -1178,15 +1178,25 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         return getClass().getSimpleName();
     }
 
-    private boolean isTowerNode(int id) {
+    // ORS-GH MOD START - expose method to ORS
+    protected boolean isTowerNode(int id) {
+    // ORS-GH MOD END
         // tower nodes are indexed -3, -4, -5, ...
         return id < JUNCTION_NODE;
     }
 
-    private boolean isPillarNode(int id) {
+    // ORS-GH MOD START - expose method to ORS
+    protected boolean isPillarNode(int id) {
+    // ORS-GH MOD END
         // pillar nodes are indexed 3, 4, 5, ..
         return id > CONNECTION_NODE;
     }
+
+    // ORS-GH MOD START - add new method for ORS
+    protected boolean isEmptyNode(int id) {
+        return id == EMPTY_NODE;
+    }
+    // ORS-GH MOD END
 
     private boolean isNodeId(int id) {
         return id > CONNECTION_NODE || id < JUNCTION_NODE;
