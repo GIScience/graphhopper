@@ -39,7 +39,6 @@ import com.graphhopper.storage.index.LocationIndex;
 import com.graphhopper.storage.index.Snap;
 import com.graphhopper.util.*;
 import com.graphhopper.util.details.PathDetail;
-import com.graphhopper.util.shapes.GHPoint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -250,6 +249,8 @@ public class OSMReaderTest {
         Graph graph = hopper.getGraphHopperStorage();
 
         assertEquals(2, graph.getNodes());
+        // the missing node is ignored, but the separated nodes are still connected
+        assertEquals(1, graph.getEdges());
         int n10 = AbstractGraphStorageTester.getIdOf(graph, 51.2492152);
         int n30 = AbstractGraphStorageTester.getIdOf(graph, 51.2);
 
@@ -375,6 +376,27 @@ public class OSMReaderTest {
         assertTrue(iter.next());
         assertEquals(n30, iter.getAdjNode());
         assertFalse(iter.next());
+    }
+
+    @Test
+    public void testBarrierBetweenWays() {
+        GraphHopper hopper = new GraphHopperFacade("test-barriers2.xml").
+                setMinNetworkSize(0).
+                importOrLoad();
+
+        Graph graph = hopper.getGraphHopperStorage();
+        // there are seven ways, but there should also be five barrier edges
+        // note that because of the extra edge at the loop way we do not split the loop
+        assertEquals(12, graph.getEdges());
+        int loops = 0;
+        AllEdgesIterator iter = graph.getAllEdges();
+        while (iter.next()) {
+            // there are 'loop' edges, but only between different nodes
+            assertNotEquals(iter.getBaseNode(), iter.getAdjNode());
+            if (graph.getNodeAccess().getLat(iter.getBaseNode()) == graph.getNodeAccess().getLat(iter.getAdjNode()))
+                loops++;
+        }
+        assertEquals(5 + 1, loops);
     }
 
     @Test
@@ -594,7 +616,7 @@ public class OSMReaderTest {
     }
 
     @Test
-    public void testEstimatedCenter() {
+    public void testEstimatedDistance() {
         final CarFlagEncoder encoder = new CarFlagEncoder();
         EncodingManager manager = EncodingManager.create(encoder);
         GraphHopperStorage ghStorage = newGraph(dir, manager, false, false);
@@ -621,9 +643,7 @@ public class OSMReaderTest {
             }
 
             @Override
-            public Collection<EdgeIteratorState> addOSMWay(LongIndexedContainer osmNodeIds, IntsRef wayFlags, ReaderWay way) {
-                return Collections.emptyList();
-            }
+            public void addOSMWay(LongIndexedContainer osmNodeIds, IntsRef wayFlags, ReaderWay way) {}
         };
 
         ReaderWay way = new ReaderWay(1L);
@@ -634,9 +654,6 @@ public class OSMReaderTest {
         osmreader.getNodeMap().put(2, 2);
         osmreader.processWay(way);
 
-        GHPoint p = way.getTag("estimated_center", null);
-        assertEquals(1.15, p.lat, 1e-3);
-        assertEquals(1.0, p.lon, 1e-3);
         Double d = way.getTag("estimated_distance", null);
         assertEquals(11119.5, d, 1e-1);
     }

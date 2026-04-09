@@ -76,9 +76,7 @@ import static java.util.Collections.emptyList;
  */
 public class OSMReader implements TurnCostParser.ExternalInternalMap {
     protected static final int EMPTY_NODE = -1;
-    // pillar node is >= 3
     protected static final int PILLAR_NODE = 1;
-    // tower node is <= -3
     protected static final int TOWER_NODE = -2;
     private static final Logger LOGGER = LoggerFactory.getLogger(OSMReader.class);
     private final GraphHopperStorage ghStorage;
@@ -119,15 +117,17 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     private Date osmDataDate;
     private final IntsRef tempRelFlags;
     private final TurnCostStorage tcs;
-
     // ORS-GH MOD - Add variable for identifying which tags from nodes should be stored on their containing ways
     private Set<String> nodeTagsToStore = new HashSet<>();
     // ORS-GH MOD - Add variable for storing tags obtained from nodes
     private GHLongObjectHashMap<Map<String, Object>> osmNodeTagValues;
+    // ORS-GH MOD - Collect edges created for a given way
+    List<EdgeIteratorState> createdEdges;
 
     protected void initNodeTagsToStore(HashSet<String> nodeTagsToStore) {
         nodeTagsToStore.addAll(nodeTagsToStore);
     }
+    // ORS-GH MOD END
 
     public OSMReader(GraphHopperStorage ghStorage, OSMReaderConfig config) {
         this.ghStorage = ghStorage;
@@ -295,15 +295,11 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         long relationStart = -1;
         long counter = 1;
         try (OSMInput in = openOsmInputFile(osmFile)) {
-            LongIntMap nodeFilter = getNodeMap();
-
             ReaderElement item;
             while ((item = in.getNext()) != null) {
                 switch (item.getType()) {
                     case ReaderElement.NODE:
-                        if (nodeFilter.get(item.getId()) != EMPTY_NODE) {
-                            processNode((ReaderNode) item);
-                        }
+                        processNode((ReaderNode) item);
                         break;
 
                     case ReaderElement.WAY:
@@ -370,7 +366,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             return;
 
         // ORS-GH MOD START
-        List<EdgeIteratorState> createdEdges = new ArrayList<>();
+        createdEdges = new ArrayList<>();
         // ORS-GH MOD END
         LongArrayList osmNodeIds = way.getNodes();
         // look for barriers along the way
@@ -392,18 +388,18 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
                         if (lastBarrier < 0)
                             lastBarrier = 0;
 
-                        // add way up to barrier shadow node
+                        // add way up to barrier shadow node                        
                         int length = i - lastBarrier + 1;
                         LongArrayList partNodeIds = new LongArrayList();
                         partNodeIds.add(osmNodeIds.buffer, lastBarrier, length);
                         partNodeIds.set(length - 1, newNodeId);
-                        createdEdges.addAll(addOSMWay(partNodeIds, edgeFlags, way));
+                        addOSMWay(partNodeIds, edgeFlags, way);
 
                         // create zero length edge for barrier
-                        createdEdges.addAll(addBarrierEdge(newNodeId, nodeId, edgeFlags, nodeFlags, way));
+                        addBarrierEdge(newNodeId, nodeId, edgeFlags, nodeFlags, way);
                     } else {
                         // run edge from real first node to shadow node
-                        createdEdges.addAll(addBarrierEdge(nodeId, newNodeId, edgeFlags, nodeFlags, way));
+                        addBarrierEdge(nodeId, newNodeId, edgeFlags, nodeFlags, way);
 
                         // exchange first node for created barrier node
                         osmNodeIds.set(0, newNodeId);
@@ -419,13 +415,13 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             if (lastBarrier < size - 1) {
                 LongArrayList partNodeIds = new LongArrayList();
                 partNodeIds.add(osmNodeIds.buffer, lastBarrier, size - lastBarrier);
-                createdEdges.addAll(addOSMWay(partNodeIds, edgeFlags, way));
+                addOSMWay(partNodeIds, edgeFlags, way);
             }
         } else {
             // ORS-GH MOD START - code injection point
             if (!onCreateEdges(way, osmNodeIds, edgeFlags, createdEdges)) {
                 // no barriers - simply add the whole way
-                createdEdges.addAll(addOSMWay(way.getNodes(), edgeFlags, way));
+                addOSMWay(way.getNodes(), edgeFlags, way);
                 // ORS-GH MOD END
             }
         }
@@ -459,7 +455,6 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             // Add artificial tag for the estimated distance and center
             way.setTag("estimated_distance", estimatedDist);
             estimatedCenter = new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2);
-            way.setTag("estimated_center", estimatedCenter);
         }
 
         // ORS-GH MOD START - Store the actual length of the way (e.g. used for better ferry duration calculations)
@@ -569,7 +564,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         for (OSMTurnRelation turnRelation : turnRelations) {
             int viaNode = getInternalNodeIdOfOsmNode(turnRelation.getViaOsmNodeId());
             // street with restriction was not included (access or tag limits etc)
-            if (viaNode != EMPTY_NODE)
+            if (viaNode >= 0)
                 encodingManager.handleTurnRelationTags(turnRelation, this, graph);
         }
     }
@@ -586,10 +581,10 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     @Override
     public int getInternalNodeIdOfOsmNode(long nodeOsmId) {
         int id = getNodeMap().get(nodeOsmId);
-        if (id < TOWER_NODE)
+        if (isTowerNode(id))
             return -id - 3;
 
-        return EMPTY_NODE;
+        return -1;
     }
 
     // TODO remove this ugly stuff via better preprocessing phase! E.g. putting every tags etc into a helper file!
@@ -597,11 +592,10 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     public double getTmpLatitude(int id) {
         if (id == EMPTY_NODE)
             return Double.NaN;
-        if (id < TOWER_NODE) {
-            // tower node
+        if (isTowerNode(id)) {
             id = -id - 3;
             return nodeAccess.getLat(id);
-        } else if (id > -TOWER_NODE) {
+        } else if (isPillarNode(id)) {
             // pillar node
             id = id - 3;
             return pillarInfo.getLat(id);
@@ -614,12 +608,10 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     public double getTmpLongitude(int id) {
         if (id == EMPTY_NODE)
             return Double.NaN;
-        if (id < TOWER_NODE) {
-            // tower node
+        if (isTowerNode(id)) {
             id = -id - 3;
             return nodeAccess.getLon(id);
-        } else if (id > -TOWER_NODE) {
-            // pillar node
+        } else if (isPillarNode(id)) {
             id = id - 3;
             return pillarInfo.getLon(id);
         } else
@@ -631,7 +623,14 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         // ORS-GH MOD START - code injection point
         node = onProcessNode(node);
         // ORS-GH MOD END
-        addNode(node);
+        int nodeType = getNodeMap().get(node.getId());
+        if (nodeType == EMPTY_NODE) {
+            return;
+        } else if (nodeType == TOWER_NODE) {
+            addTowerNode(node.getId(), node.getLat(), node.getLon(), eleProvider.getEle(node));
+        } else if (nodeType == PILLAR_NODE) {
+            addPillarNode(node.getId(), node.getLat(), node.getLon(), eleProvider.getEle(node));
+        }
 
         // analyze node tags for barriers
         if (node.hasTags()) {
@@ -696,10 +695,6 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         nextPillarId++;
     }
 
-    protected double getElevation(ReaderNode node) {
-        return this.eleProvider.getEle(node);
-    }
-
     /**
      * The nodeFlags store the encoders to check for accessibility in edgeFlags. E.g. if nodeFlags==3, then the
      * accessibility of the first two encoders will be check in edgeFlags
@@ -754,9 +749,8 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     /**
      * This method creates from an OSM way (via the osm ids) one or more edges in the graph.
      */
-    public Collection<EdgeIteratorState> addOSMWay(final LongIndexedContainer osmNodeIds, final IntsRef flags, final ReaderWay way) {
+    void addOSMWay(final LongIndexedContainer osmNodeIds, final IntsRef flags, final ReaderWay way) {
         final PointList pointList = new PointList(osmNodeIds.size(), nodeAccess.is3D());
-        final List<EdgeIteratorState> newEdges = new ArrayList<>(5);
         int firstNode = -1;
         int lastInBoundsPillarNode = -1;
         try {
@@ -764,22 +758,22 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             int firstExisting = -1;
             int lastExisting = -1;
             for (int i = 0; i < osmNodeIds.size(); ++i) {
-                final long tmpNode = getNodeMap().get(osmNodeIds.get(i));
-                if (tmpNode > -TOWER_NODE || tmpNode < TOWER_NODE) {
+                final int tmpNode = getNodeMap().get(osmNodeIds.get(i));
+                if (isNodeId(tmpNode)) {
                     firstExisting = i;
                     break;
                 }
             }
             for (int i = osmNodeIds.size() - 1; i >= 0; --i) {
-                final long tmpNode = getNodeMap().get(osmNodeIds.get(i));
-                if (tmpNode > -TOWER_NODE || tmpNode < TOWER_NODE) {
+                final int tmpNode = getNodeMap().get(osmNodeIds.get(i));
+                if (isNodeId(tmpNode)) {
                     lastExisting = i;
                     break;
                 }
             }
             if (firstExisting < 0) {
                 assert lastExisting < 0;
-                return newEdges;
+                return;
             }
             for (int i = firstExisting; i <= lastExisting; i++) {
                 final long osmNodeId = osmNodeIds.get(i);
@@ -793,16 +787,16 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
 
                 if (tmpNode == PILLAR_NODE) {
                     // In some cases no node information is saved for the specified osmId.
-                    // ie. a way references a <node> which does not exist in the current file.
+                    // i.e. a way references a <node> which does not exist in the current file.
                     // => if the node before was a pillar node then convert into to tower node (as it is also end-standing).
-                    if (!pointList.isEmpty() && lastInBoundsPillarNode > -TOWER_NODE) {
+                    if (!pointList.isEmpty() && isPillarNode(lastInBoundsPillarNode)) {
                         // transform the pillar node to a tower node
                         tmpNode = lastInBoundsPillarNode;
                         tmpNode = handlePillarNode(tmpNode, osmNodeId, null, true);
                         tmpNode = -tmpNode - 3;
                         if (pointList.size() > 1 && firstNode >= 0) {
                             // TOWER node
-                            newEdges.add(addEdge(firstNode, tmpNode, pointList, flags, way));
+                            addEdge(firstNode, tmpNode, pointList, flags, way);
                             pointList.clear();
                             pointList.add(nodeAccess, tmpNode);
                         }
@@ -812,46 +806,47 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
                     continue;
                 }
 
-                if (tmpNode <= -TOWER_NODE && tmpNode >= TOWER_NODE)
+                if (!isNodeId(tmpNode))
                     throw new AssertionError("Mapped index not in correct bounds " + tmpNode + ", " + osmNodeId);
 
-                if (tmpNode > -TOWER_NODE) {
-                    boolean convertToTowerNode = i == firstExisting || i == lastExisting;
-                    if (!convertToTowerNode) {
-                        lastInBoundsPillarNode = tmpNode;
-                    }
-
+                if (isPillarNode(tmpNode)) {
                     // PILLAR node, but convert to towerNode if end-standing
+                    boolean convertToTowerNode = i == firstExisting || i == lastExisting;
+                    if (!convertToTowerNode)
+                        lastInBoundsPillarNode = tmpNode;
                     tmpNode = handlePillarNode(tmpNode, osmNodeId, pointList, convertToTowerNode);
                 }
 
-                if (tmpNode < TOWER_NODE) {
-                    // TOWER node
+                if (isTowerNode(tmpNode)) {
                     tmpNode = -tmpNode - 3;
 
                     if (firstNode >= 0 && firstNode == tmpNode) {
                         // loop detected. See #1525 and #1533. Insert last OSM ID as tower node. Do this for all loops so that users can manipulate loops later arbitrarily.
                         long lastOsmNodeId = osmNodeIds.get(i - 1);
                         int lastGHNodeId = getNodeMap().get(lastOsmNodeId);
-                        if (lastGHNodeId < TOWER_NODE) {
+                        if (isTowerNode(lastGHNodeId)) {
                             LOGGER.warn("Pillar node " + lastOsmNodeId + " is already a tower node and used in loop, see #1533. " +
                                     "Fix mapping for way " + way.getId() + ", nodes:" + osmNodeIds);
                             break;
                         }
 
                         int newEndNode = -handlePillarNode(lastGHNodeId, lastOsmNodeId, pointList, true) - 3;
-                        newEdges.add(addEdge(firstNode, newEndNode, pointList, flags, way));
+                        addEdge(firstNode, newEndNode, pointList, flags, way);
                         pointList.clear();
+                        // ORS-GH MOD START
                         lastInBoundsPillarNode = -1;
+                        // ORS-GH MOD END
                         pointList.add(nodeAccess, newEndNode);
                         firstNode = newEndNode;
                     }
 
                     pointList.add(nodeAccess, tmpNode);
                     if (firstNode >= 0) {
-                        newEdges.add(addEdge(firstNode, tmpNode, pointList, flags, way));
+                        addEdge(firstNode, tmpNode, pointList, flags, way);
                         pointList.clear();
+                        // ORS-GH MOD START
                         lastInBoundsPillarNode = -1;
+                        // ORS-GH MOD END
                         pointList.add(nodeAccess, tmpNode);
                     }
                     firstNode = tmpNode;
@@ -861,10 +856,9 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             LOGGER.error("Couldn't properly add edge with osm ids:" + osmNodeIds, ex);
             throw ex;
         }
-        return newEdges;
     }
 
-    EdgeIteratorState addEdge(int fromIndex, int toIndex, PointList pointList, IntsRef flags, ReaderWay way) {
+    void addEdge(int fromIndex, int toIndex, PointList pointList, IntsRef flags, ReaderWay way) {
         // sanity checks
         if (fromIndex < 0 || toIndex < 0)
             throw new AssertionError("to or from index is invalid for this edge " + fromIndex + "->" + toIndex + ", points:" + pointList);
@@ -885,7 +879,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         double towerNodeDistance = distCalc.calcDistance(pointList);
 
         if (towerNodeDistance < 0.001) {
-            // As investigation shows often two paths should have crossed via one identical point
+            // As investigation shows often two paths should have crossed via one identical point 
             // but end up in two very close points.
             zeroCounter++;
             towerNodeDistance = 0.001;
@@ -898,7 +892,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         }
 
         if (Double.isInfinite(towerNodeDistance) || towerNodeDistance > maxDistance) {
-            // Too large is very rare and often the wrong tagging. See #435
+            // Too large is very rare and often the wrong tagging. See #435 
             // so we can avoid the complexity of splitting the way for now (new towernodes would be required, splitting up geometry etc)
             LOGGER.warn("Bug in OSM or GraphHopper. Too big tower node distance " + towerNodeDistance + " reset to large value, osm way " + way.getId());
             towerNodeDistance = maxDistance;
@@ -918,7 +912,8 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
 
         checkDistance(iter);
         storeOsmWayID(iter.getEdge(), way.getId());
-        return iter;
+
+        createdEdges.add(iter);
     }
 
     private void checkCoordinates(int nodeIndex, GHPoint point) {
@@ -964,6 +959,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             // ORS-GH MOD END
                 throw new RuntimeException("Conversion pillarNode to towerNode already happened!? "
                     + "osmId:" + osmId + " pillarIndex:" + tmpNode);
+
         if (convertToTowerNode) {
             // convert pillarNode type to towerNode, make pillar values invalid
             pillarInfo.setNode(tmpNode, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
@@ -972,6 +968,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             pointList.add(lat, lon, ele);
         else
             pointList.add(lat, lon);
+
         return tmpNode;
     }
 
@@ -998,10 +995,10 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     long addBarrierNode(long nodeId) {
         ReaderNode newNode;
         int graphIndex = getNodeMap().get(nodeId);
-        if (graphIndex < TOWER_NODE) {
+        if (isTowerNode(graphIndex)) {
             graphIndex = -graphIndex - 3;
             newNode = new ReaderNode(createArtificialOSMNodeId(), nodeAccess.getLat(graphIndex), nodeAccess.getLon(graphIndex));
-        } else if (graphIndex > -TOWER_NODE) {
+        } else if (isPillarNode(graphIndex)) {
             graphIndex = graphIndex - 3;
             newNode = new ReaderNode(createArtificialOSMNodeId(), pillarInfo.getLat(graphIndex), pillarInfo.getLon(graphIndex));
         } else {
@@ -1023,7 +1020,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     /**
      * Add a zero length edge with reduced routing options to the graph.
      */
-    Collection<EdgeIteratorState> addBarrierEdge(long fromId, long toId, IntsRef inEdgeFlags, long nodeFlags, ReaderWay way) {
+    void addBarrierEdge(long fromId, long toId, IntsRef inEdgeFlags, long nodeFlags, ReaderWay way) {
         IntsRef edgeFlags = IntsRef.deepCopyOf(inEdgeFlags);
         // clear blocked directions from flags
         for (BooleanEncodedValue accessEnc : encodingManager.getAccessEncFromNodeFlags(nodeFlags)) {
@@ -1034,7 +1031,7 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         barrierNodeIds.clear();
         barrierNodeIds.add(fromId);
         barrierNodeIds.add(toId);
-        return addOSMWay(barrierNodeIds, edgeFlags, way);
+        addOSMWay(barrierNodeIds, edgeFlags, way);
     }
 
     /**
@@ -1190,5 +1187,19 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
     @Override
     public String toString() {
         return getClass().getSimpleName();
+    }
+
+    private boolean isTowerNode(int id) {
+        // tower nodes are indexed -3, -4, -5, ...
+        return id < TOWER_NODE;
+    }
+
+    private boolean isPillarNode(int id) {
+        // pillar nodes are indexed 3, 4, 5, ..
+        return id > -TOWER_NODE;
+    }
+
+    private boolean isNodeId(int id) {
+        return id > -TOWER_NODE || id < TOWER_NODE;
     }
 }
