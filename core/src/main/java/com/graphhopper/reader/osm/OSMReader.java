@@ -640,6 +640,9 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
             addTowerNode(node.getId(), node.getLat(), node.getLon(), eleProvider.getEle(node));
         } else if (nodeType == INTERMEDIATE_NODE || nodeType == END_NODE) {
             addPillarNode(node.getId(), node.getLat(), node.getLon(), eleProvider.getEle(node));
+            // ORS-GH MOD START - Store tags from the node so that they can be accessed later
+            storeNodeTags(node);
+            // ORS-GH MOD END
         }
 
         // analyze node tags for barriers
@@ -668,22 +671,6 @@ public class OSMReader implements TurnCostParser.ExternalInternalMap {
         return node;
     }
     // ORS-GH MOD END
-
-    boolean addNode(ReaderNode node) {
-        int nodeType = getNodeMap().get(node.getId());
-        if (nodeType == EMPTY_NODE)
-            return false;
-
-        if (nodeType == TOWER_NODE) {
-            addTowerNode(node.getId(), node.getLat(), node.getLon(), eleProvider.getEle(node));
-        } else if (nodeType == PILLAR_NODE) {
-            addPillarNode(node.getId(), node.getLat(), node.getLon(), eleProvider.getEle(node));
-            // ORS-GH MOD START - Store tags from the node so that they can be accessed later
-            storeNodeTags(node);
-            // ORS-GH MOD END
-        }
-        return true;
-    }
 
     // ORS-GH MOD START - Store tags from the node so that they can be accessed later
     private void storeNodeTags(ReaderNode node) {
