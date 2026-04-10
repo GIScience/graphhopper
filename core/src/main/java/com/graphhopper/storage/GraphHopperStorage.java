@@ -159,9 +159,8 @@ public class GraphHopperStorage implements Graph, Closeable {
      * @see #addCHGraph(CHConfig)
      */
     public GraphHopperStorage addCHGraphs(List<CHConfig> chConfigs) {
-        for (CHConfig chConfig : chConfigs) {
+        for (CHConfig chConfig : chConfigs)
             addCHGraph(chConfig);
-        }
         return this;
     }
 
