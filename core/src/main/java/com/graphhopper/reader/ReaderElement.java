@@ -37,13 +37,13 @@ public abstract class ReaderElement {
     private final Map<String, Object> properties;
 
     protected ReaderElement(long id, int type) {
-        this(id, type, 4);
+        this(id, type, new HashMap<>(4));
     }
 
-    protected ReaderElement(long id, int type, int propertyMapSize) {
+    protected ReaderElement(long id, int type, Map<String, Object> properties) {
         this.id = id;
         this.type = type;
-        properties = new HashMap<>(propertyMapSize);
+        this.properties = properties;
     }
 
     // ORS-GH MOD START
@@ -76,11 +76,7 @@ public abstract class ReaderElement {
         return tagTxt.toString();
     }
 
-    // ORS-GH MOD START - change access level
-    // Used in OSMReader mod to get node tags when processing edge edge
-    //protected Map<String, Object> getTags()
     public Map<String, Object> getTags() {
-    // ORS-GH MOD END
         return properties;
     }
 

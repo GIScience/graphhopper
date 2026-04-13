@@ -431,7 +431,9 @@ public class EncodingManager implements EncodedValueLookup {
         edgeEncoders.add(encoder);
     }
 
+    // ORS-GH MOD START expose method
     public void addEncodedValue(EncodedValue ev, boolean withNamespace) {
+    // ORS-GH MOD END
         String normalizedKey = ev.getName().replaceAll(SPECIAL_SEPARATOR, "_");
         if (hasEncodedValue(normalizedKey))
             throw new IllegalStateException("EncodedValue " + ev.getName() + " collides with " + normalizedKey);
@@ -676,16 +678,20 @@ public class EncodingManager implements EncodedValueLookup {
     }
 
     /**
-     * Analyze tags on osm node. Store node tags (barriers etc) for later usage while parsing way.
+     * Updates the given edge flags based on node tags
      */
-    public long handleNodeTags(ReaderNode node) {
-        long flags = 0;
-        for (int i = 0, edgeEncodersSize = edgeEncoders.size(); i < edgeEncodersSize; i++) {
-            AbstractFlagEncoder encoder = edgeEncoders.get(i);
-            flags |= (encoder.isBarrier(node) ? 1L << i : 0);
+    public IntsRef handleNodeTags(Map<String, Object> nodeTags, IntsRef edgeFlags) {
+        for (AbstractFlagEncoder encoder : edgeEncoders) {
+            // for now we just create a dummy reader node, because our encoders do not make use of the coordinates anyway
+            ReaderNode readerNode = new ReaderNode(0, 0, 0, nodeTags);
+            // block access for all encoders that treat this node as a barrier
+            if (encoder.isBarrier(readerNode)) {
+                BooleanEncodedValue accessEnc = encoder.getAccessEnc();
+                accessEnc.setBool(false, edgeFlags, false);
+                accessEnc.setBool(true, edgeFlags, false);
+            }
         }
-
-        return flags;
+        return edgeFlags;
     }
 
     public void applyWayTags(ReaderWay way, EdgeIteratorState edge) {
@@ -746,16 +752,6 @@ public class EncodingManager implements EncodedValueLookup {
         return false;
     }
     // ORS-GH MOD END
-
-    public List<BooleanEncodedValue> getAccessEncFromNodeFlags(long importNodeFlags) {
-        List<BooleanEncodedValue> list = new ArrayList<>(edgeEncoders.size());
-        for (int i = 0; i < edgeEncoders.size(); i++) {
-            FlagEncoder encoder = edgeEncoders.get(i);
-            if (((1L << i) & importNodeFlags) != 0)
-                list.add(encoder.getAccessEnc());
-        }
-        return list;
-    }
 
     @Override
     public List<EncodedValue> getEncodedValues() {
