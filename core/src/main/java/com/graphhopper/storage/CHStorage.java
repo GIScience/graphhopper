@@ -20,6 +20,8 @@ package com.graphhopper.storage;
 
 import com.graphhopper.routing.ch.NodeOrderingProvider;
 import com.graphhopper.routing.ch.PrepareEncoder;
+import com.graphhopper.util.Constants;
+import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.Helper;
 
 import java.util.Locale;
@@ -159,18 +161,20 @@ public class CHStorage {
 
     public void flush() {
         // nodes
-        nodesCH.setHeader(0, nodeCount);
-        nodesCH.setHeader(4, nodeCHEntryBytes);
-// ORS-GH MOD START added header field
-        nodesCH.setHeader(8, coreNodeCount);
-// ORS-GH MOD END
+        nodesCH.setHeader(0, Constants.VERSION_NODE_CH);
+        nodesCH.setHeader(4, nodeCount);
+        nodesCH.setHeader(8, nodeCHEntryBytes);
+        // ORS-GH MOD START added header field
+        nodesCH.setHeader(12, coreNodeCount);
+        // ORS-GH MOD END
         nodesCH.flush();
 
         // shortcuts
-        shortcuts.setHeader(0, shortcutCount);
-        shortcuts.setHeader(4, shortcutEntryBytes);
-        shortcuts.setHeader(8, numShortcutsExceedingWeight);
-        shortcuts.setHeader(12, edgeBased ? 1 : 0);
+        shortcuts.setHeader(0, Constants.VERSION_SHORTCUT);
+        shortcuts.setHeader(4, shortcutCount);
+        shortcuts.setHeader(8, shortcutEntryBytes);
+        shortcuts.setHeader(12, numShortcutsExceedingWeight);
+        shortcuts.setHeader(16, edgeBased ? 1 : 0);
         shortcuts.flush();
     }
 
@@ -179,17 +183,21 @@ public class CHStorage {
             return false;
 
         // nodes
-        nodeCount = nodesCH.getHeader(0);
-        nodeCHEntryBytes = nodesCH.getHeader(4);
+        int nodesCHVersion = nodesCH.getHeader(0);
+        GHUtility.checkDAVersion(nodesCH.getName(), Constants.VERSION_NODE_CH, nodesCHVersion);
+        nodeCount = nodesCH.getHeader(4);
+        nodeCHEntryBytes = nodesCH.getHeader(8);
 // ORS-GH MOD START added header field
-        coreNodeCount = nodesCH.getHeader(8);
+        coreNodeCount = nodesCH.getHeader(12);
 // ORS-GH MOD END
 
         // shortcuts
-        shortcutCount = shortcuts.getHeader(0);
-        shortcutEntryBytes = shortcuts.getHeader(4);
-        numShortcutsExceedingWeight = shortcuts.getHeader(8);
-        edgeBased = shortcuts.getHeader(12) == 1;
+        int shortcutsVersion = shortcuts.getHeader(0);
+        GHUtility.checkDAVersion(shortcuts.getName(), Constants.VERSION_SHORTCUT, shortcutsVersion);
+        shortcutCount = shortcuts.getHeader(4);
+        shortcutEntryBytes = shortcuts.getHeader(8);
+        numShortcutsExceedingWeight = shortcuts.getHeader(12);
+        edgeBased = shortcuts.getHeader(16) == 1;
 
         return true;
     }
