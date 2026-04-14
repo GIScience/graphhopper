@@ -17,9 +17,6 @@
  */
 package com.graphhopper.storage;
 
-import java.nio.ByteOrder;
-import java.util.Map;
-
 /**
  * Maintains a collection of DataAccess objects stored at the same location. One GraphStorage per
  * Directory as we need one to maintain one DataAccess object for nodes, edges and location2id
@@ -35,73 +32,25 @@ public interface Directory {
     String getLocation();
 
     /**
-     * @return the order in which the data is stored
-     * @deprecated
-     */
-    @Deprecated
-    default ByteOrder getByteOrder() {
-        return  ByteOrder.LITTLE_ENDIAN;
-    }
-
-    /**
      * Creates a new DataAccess object with the given name in the location of this Directory. Each name can only
      * be used once.
      */
     DataAccess create(String name);
 
     /**
-     * @deprecated use {@link #create(String)} instead.
-     */
-    @Deprecated
-    default DataAccess find(String name) {
-        return create(name);
-    }
-
-    /**
      * @param segmentSize segment size in bytes or -1 to use the default of the corresponding DataAccess implementation
      */
     DataAccess create(String name, int segmentSize);
 
-    /**
-     * @deprecated use {@link #create(String, int)} instead.
-     */
-    @Deprecated
-    default DataAccess find(String name, int segmentSize) {
-        return create(name, segmentSize);
-    }
-
     DataAccess create(String name, DAType type);
-
-    /**
-     * @deprecated use {@link #create(String, DAType)} instead.
-     */
-    @Deprecated
-    default DataAccess find(String name, DAType type) {
-        return create(name, type);
-    }
 
     DataAccess create(String name, DAType type, int segmentSize);
 
     /**
-     * @deprecated use {@link #create(String, DAType, int)} instead.
-     */
-    @Deprecated
-    default DataAccess find(String name, DAType type, int segmentSize) {
-        return create(name, type, segmentSize);
-    }
-
-    /**
      * Removes the specified object from the directory.
      */
-    void remove(String name);
+    void remove(DataAccess da);
 
-    /**
-     * @deprecated use {@link #remove(String)} instead.
-     */
-    @Deprecated
-    default void remove(DataAccess da) {
-        remove(da.getName());
-    }
     /**
      * @return the default type of a newly created DataAccess object
      */

@@ -18,6 +18,7 @@
 package com.graphhopper.storage;
 
 import java.io.File;
+import java.util.HashMap;
 import java.util.*;
 
 import static com.graphhopper.storage.DAType.RAM_INT;
@@ -169,13 +170,13 @@ public class GHDirectory implements Directory {
     }
 
     @Override
-    public void remove(String name) {
-        DataAccess old = map.remove(name);
+    public void remove(DataAccess da) {
+        DataAccess old = map.remove(da.getName());
         if (old == null)
-            throw new IllegalStateException("Couldn't remove DataAccess: " + name);
+            throw new IllegalStateException("Couldn't remove DataAccess: " + da.getName());
 
         old.close();
-        removeBackingFile(old, name);
+        removeBackingFile(old, da.getName());
     }
 
     private void removeBackingFile(DataAccess da, String name) {

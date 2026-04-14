@@ -43,7 +43,7 @@ public class NameIndex implements Storable<NameIndex> {
     }
 
     protected NameIndex(Directory dir, String filename) {
-        names = dir.find(filename);
+        names = dir.create(filename);
     }
 
     public NameIndex create(long initBytes) {
