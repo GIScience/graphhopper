@@ -494,7 +494,12 @@ public class OSMReader {
 
     private void finishedReading() {
         encodingManager.releaseParsers();
-        eleProvider.release();
+        // ORS-GH MOD START
+        // MARQ24: DO NOT CLEAR THE CACHE of the ELEVATION PROVIDERS - since the data will be reused
+        // the provider data will be cleared only after the last VehicleProfile have completed
+        // the work...
+        //eleProvider.release();
+        // ORS-GH MOD END
         osmWayIdToRelationFlagsMap = null;
         osmWayIdSet = null;
         edgeIdToOsmWayIdMap = null;
