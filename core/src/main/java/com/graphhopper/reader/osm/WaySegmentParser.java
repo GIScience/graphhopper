@@ -445,7 +445,8 @@ public class WaySegmentParser {
                 System.out.println("edge " + from + "->" + to + " (" + pointList.size() + " points)");
         private int workerThreads = 2;
         // ORS-GH MOD START
-        private NodeProcessor nodeProcessor;
+        private NodeProcessor nodeProcessor = (node) -> {
+        };
         // ORS-GH MOD END
 
         /**
