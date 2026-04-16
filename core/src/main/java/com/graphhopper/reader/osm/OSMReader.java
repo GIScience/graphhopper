@@ -63,11 +63,15 @@ public class OSMReader {
     private static final Logger LOGGER = LoggerFactory.getLogger(OSMReader.class);
 
     private final OSMReaderConfig config;
-    private final GraphHopperStorage ghStorage;
-    private final NodeAccess nodeAccess;
+    // ORS-GH MOD START expose to ORS
+    protected final GraphHopperStorage ghStorage;
+    protected final NodeAccess nodeAccess;
+    // ORS-GH MOD END
     private final TurnCostStorage turnCostStorage;
-    private final EncodingManager encodingManager;
-    private final DistanceCalc distCalc = DistanceCalcEarth.DIST_EARTH;
+    // ORS-GH MOD START expose to ORS
+    protected final EncodingManager encodingManager;
+    protected final DistanceCalc distCalc = DistanceCalcEarth.DIST_EARTH;
+    // ORS-GH MOD END
     private ElevationProvider eleProvider = ElevationProvider.NOOP;
     private AreaIndex<CustomArea> areaIndex;
     private CountryRuleFactory countryRuleFactory = null;
@@ -82,6 +86,9 @@ public class OSMReader {
     // stores osm way ids used by relations to identify which edge ids needs to be mapped later
     private GHLongHashSet osmWayIdSet = new GHLongHashSet();
     private IntLongMap edgeIdToOsmWayIdMap;
+    // ORS-GH MOD start
+    protected WaySegmentParser waySegmentParser;
+    // ORS-GH MOD end
 
     public OSMReader(GraphHopperStorage ghStorage, OSMReaderConfig config) {
         this.ghStorage = ghStorage;
@@ -140,12 +147,18 @@ public class OSMReader {
         if (!osmFile.exists())
             throw new IllegalStateException("Your specified OSM file does not exist:" + osmFile.getAbsolutePath());
 
-        WaySegmentParser waySegmentParser = new WaySegmentParser.Builder(ghStorage.getNodeAccess())
+        // ORS-GH MOD START - expose waySegmentParser to other methods
+        waySegmentParser = new WaySegmentParser.Builder(ghStorage.getNodeAccess())
+        // ORS-GH MOD END
                 .setDirectory(ghStorage.getDirectory())
                 .setElevationProvider(eleProvider)
                 .setWayFilter(this::acceptWay)
                 .setSplitNodeFilter(this::isBarrierNode)
                 .setWayPreprocessor(this::preprocessWay)
+                // ORS-GH MOD START
+                .setNodeProcessor(this::processNode)
+                .setWayPostprocessor(this::postprocessWay)
+                // ORS-GH MOD END
                 .setRelationPreprocessor(this::preprocessRelations)
                 .setRelationProcessor(this::processRelation)
                 .setEdgeHandler(this::addEdge)
@@ -160,6 +173,12 @@ public class OSMReader {
                 osmFile.getAbsolutePath(), nf(ghStorage.getNodes()), nf(ghStorage.getEdges()), nf(zeroCounter));
         finishedReading();
     }
+
+    // ORS-GH MOD START
+    protected void processNode(ReaderNode readerNode) {}
+
+    protected void postprocessWay(ReaderWay readerWay) {}
+    // ORS-GH MOD END
 
     /**
      * @return the timestamp given in the OSM file header or null if not found
@@ -210,6 +229,9 @@ public class OSMReader {
             way.setTag("estimated_distance", estimatedDist);
             estimatedCenter = new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2);
         }
+        // ORS-GH MOD START
+        recordExactWayDistance(way);
+        // ORS-GH MOD END
 
         if (way.getTag("duration") != null) {
             try {
@@ -245,6 +267,10 @@ public class OSMReader {
         // also add all custom areas as artificial tag
         way.setTag("custom_areas", customAreas);
     }
+
+    // ORS-GH MOD START
+    protected void recordExactWayDistance(ReaderWay way) {}
+    // ORS-GH MOD END
 
     /**
      * This method is called for each segment an OSM way is split into during the second pass of {@link WaySegmentParser}.
@@ -326,12 +352,12 @@ public class OSMReader {
             getEdgeIdToOsmWayIdMap().put(iter.getEdge(), way.getId());
         }
         // ORS-GH MOD start
-        postprocessAddEdge(way, iter);
+        onProcessEdge(way, iter);
         // ORS-GH MOD end
     }
 
     // ORS-GH MOD start extension hook for ORS
-    protected void postprocessAddEdge(ReaderWay way, EdgeIteratorState iter) {}
+    protected void onProcessEdge(ReaderWay way, EdgeIteratorState iter) {}
     // ORS-GH MOD end
 
     private void checkCoordinates(int nodeIndex, GHPoint point) {
@@ -351,7 +377,9 @@ public class OSMReader {
                     + ", difference: " + (edgeDistance - geometryDistance));
     }
 
-    private void preprocessWay(GHPoint first, GHPoint last, ReaderWay way) {
+    // ORS-GH MOD START - expose to allow overriding in ORS
+    protected void preprocessWay(GHPoint first, GHPoint last, ReaderWay way) {
+    // ORS-GH MOD END
         setArtificialWayTags(first, last, way);
         EncodingManager.AcceptWay acceptWay = new EncodingManager.AcceptWay();
         if (!encodingManager.acceptWay(way, acceptWay))

@@ -53,7 +53,9 @@ import static java.util.Collections.emptyMap;
  *   a different mapping, because we store node tags for only a small fraction of all OSM nodes.
  * </pre>
  */
-class OSMNodeData {
+// ORS-GH MOD START expose to ORS
+public class OSMNodeData {
+// ORS-GH MOD END
     static final int JUNCTION_NODE = -2;
     static final int EMPTY_NODE = -1;
     static final int END_NODE = 0;
