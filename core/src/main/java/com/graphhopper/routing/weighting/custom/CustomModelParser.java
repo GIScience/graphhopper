@@ -201,9 +201,11 @@ public class CustomModelParser {
     private static String getVariableDeclaration(EncodedValueLookup lookup, String arg) {
         if (lookup.hasEncodedValue(arg)) {
             EncodedValue enc = lookup.getEncodedValue(arg, EncodedValue.class);
-            // ORS MOD: SparseEncodedValues are not really encoded values, but are built to behave like them
-            if (enc.getClass().getSimpleName().contains("Sparse")) {
-                return "Object " + arg + " = ((SparseEncodedValue) this." + arg + "_enc).get(edge.getEdge());\n";
+            // ORS MOD: SparseEncodedValues store floats as Object (Double); generate double variable for numeric comparison
+            if (enc instanceof SparseEncodedValue) {
+                String rawVar = "_ors_raw_" + arg;
+                return "Object " + rawVar + " = ((SparseEncodedValue) this." + arg + "_enc).get(edge.getEdge());\n"
+                        + "double " + arg + " = " + rawVar + " instanceof Number ? ((Number) " + rawVar + ").doubleValue() : 0.0;\n";
             }
             // ORS MOD END
             return getReturnType(enc) + " " + arg + " = reverse ? " +
