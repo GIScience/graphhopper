@@ -31,7 +31,6 @@ import com.graphhopper.util.PointAccess;
 import com.graphhopper.util.PointList;
 import com.graphhopper.util.StopWatch;
 import com.graphhopper.util.shapes.GHPoint;
-import com.graphhopper.util.shapes.GHPoint3D;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -75,7 +74,6 @@ public class WaySegmentParser {
     private final Predicate<ReaderNode> splitNodeFilter;
     // ORS-GH MOD START - additional field
     private final NodeProcessor nodeProcessor;
-    private final WayPostprocessor wayPostprocessor;
     // ORS-GH MOD END
     private final WayPreprocessor wayPreprocessor;
     private final Consumer<ReaderRelation> relationPreprocessor;
@@ -88,7 +86,7 @@ public class WaySegmentParser {
 
     // ORS-GH MOD START
     private WaySegmentParser(PointAccess nodeAccess, Directory directory, ElevationProvider eleProvider,
-                             Predicate<ReaderWay> wayFilter, Predicate<ReaderNode> splitNodeFilter, NodeProcessor nodeProcessor, WayPreprocessor wayPreprocessor, WayPostprocessor wayPostprocessor,
+                             Predicate<ReaderWay> wayFilter, Predicate<ReaderNode> splitNodeFilter, NodeProcessor nodeProcessor, WayPreprocessor wayPreprocessor,
                              Consumer<ReaderRelation> relationPreprocessor, RelationProcessor relationProcessor,
                              EdgeHandler edgeHandler, int workerThreads) {
         this.eleProvider = eleProvider;
@@ -96,7 +94,6 @@ public class WaySegmentParser {
         this.splitNodeFilter = splitNodeFilter;
         this.nodeProcessor = nodeProcessor;
         this.wayPreprocessor = wayPreprocessor;
-        this.wayPostprocessor = wayPostprocessor;
         this.relationPreprocessor = relationPreprocessor;
         this.relationProcessor = relationProcessor;
         this.edgeHandler = edgeHandler;
@@ -263,9 +260,6 @@ public class WaySegmentParser {
                 return;
             wayPreprocessor.preprocessWay(getPoint(way.getNodes().get(0)), getPoint(way.getNodes().get(way.getNodes().size() - 1)), way);
             splitWayAtJunctionsAndEmptySections(way);
-            // ORS-GH MOD START - injection point
-            wayPostprocessor.postprocessWay(way);
-            // ORS-GH MOD END
         }
 
         private void splitWayAtJunctionsAndEmptySections(ReaderWay way) {
@@ -449,8 +443,6 @@ public class WaySegmentParser {
         // ORS-GH MOD START
         private NodeProcessor nodeProcessor = (node) -> {
         };
-        private WayPostprocessor wayPostprocessor = (way) -> {
-        };
         // ORS-GH MOD END
 
         /**
@@ -501,14 +493,6 @@ public class WaySegmentParser {
             this.nodeProcessor = nodeProcessor;
             return this;
         }
-
-        /**
-         * @param wayPostprocessor callback function that is called for each accepted OSM way during the second pass
-         */
-        public Builder setWayPostprocessor(WayPostprocessor wayPostprocessor) {
-            this.wayPostprocessor = wayPostprocessor;
-            return this;
-        }
         // ORS-GH MOD END
         /**
          * @param wayPreprocessor callback function that is called for each accepted OSM way during the first pass
@@ -553,7 +537,7 @@ public class WaySegmentParser {
         // ORS-GH MOD START - added parameter
         public WaySegmentParser build() {
             return new WaySegmentParser(
-                    nodeAccess, directory, elevationProvider, wayFilter, splitNodeFilter, nodeProcessor, wayPreprocessor, wayPostprocessor, relationPreprocessor, relationProcessor,
+                    nodeAccess, directory, elevationProvider, wayFilter, splitNodeFilter, nodeProcessor, wayPreprocessor, relationPreprocessor, relationProcessor,
                     edgeHandler, workerThreads
             );
         }
@@ -613,16 +597,8 @@ public class WaySegmentParser {
         void processNode(ReaderNode node);
     }
 
-    public interface WayPostprocessor {
-        void postprocessWay(ReaderWay way);
-    }
-
-    public GHPoint3D getNodeCoordinates(long osmNodeId) {
-        return nodeData.getCoordinates(osmNodeId);
-    }
-
-    public int getNodeId(long osmNodeId) {
-        return nodeData.getId(osmNodeId);
+    public OSMNodeData getNodeData() {
+        return nodeData;
     }
     // ORS-GH MOD END
 }

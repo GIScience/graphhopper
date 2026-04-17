@@ -87,7 +87,7 @@ public class OSMReader {
     private GHLongHashSet osmWayIdSet = new GHLongHashSet();
     private IntLongMap edgeIdToOsmWayIdMap;
     // ORS-GH MOD start
-    protected WaySegmentParser waySegmentParser;
+    protected OSMNodeData nodeData;
     // ORS-GH MOD end
 
     public OSMReader(GraphHopperStorage ghStorage, OSMReaderConfig config) {
@@ -147,9 +147,7 @@ public class OSMReader {
         if (!osmFile.exists())
             throw new IllegalStateException("Your specified OSM file does not exist:" + osmFile.getAbsolutePath());
 
-        // ORS-GH MOD START - expose waySegmentParser to other methods
-        waySegmentParser = new WaySegmentParser.Builder(ghStorage.getNodeAccess())
-        // ORS-GH MOD END
+        WaySegmentParser waySegmentParser = new WaySegmentParser.Builder(ghStorage.getNodeAccess())
                 .setDirectory(ghStorage.getDirectory())
                 .setElevationProvider(eleProvider)
                 .setWayFilter(this::acceptWay)
@@ -157,13 +155,15 @@ public class OSMReader {
                 .setWayPreprocessor(this::preprocessWay)
                 // ORS-GH MOD START
                 .setNodeProcessor(this::processNode)
-                .setWayPostprocessor(this::postprocessWay)
                 // ORS-GH MOD END
                 .setRelationPreprocessor(this::preprocessRelations)
                 .setRelationProcessor(this::processRelation)
                 .setEdgeHandler(this::addEdge)
                 .setWorkerThreads(config.getWorkerThreads())
                 .build();
+        // ORS-GH MOD START - expose to ORS
+        nodeData = waySegmentParser.getNodeData();
+        // ORS-GH MOD END
         ghStorage.create(100);
         waySegmentParser.readOSM(osmFile);
         osmDataDate = waySegmentParser.getTimeStamp();
@@ -176,8 +176,6 @@ public class OSMReader {
 
     // ORS-GH MOD START
     protected void processNode(ReaderNode readerNode) {}
-
-    protected void postprocessWay(ReaderWay readerWay) {}
     // ORS-GH MOD END
 
     /**
@@ -229,9 +227,6 @@ public class OSMReader {
             way.setTag("estimated_distance", estimatedDist);
             estimatedCenter = new GHPoint((firstLat + lastLat) / 2, (firstLon + lastLon) / 2);
         }
-        // ORS-GH MOD START
-        recordExactWayDistance(way);
-        // ORS-GH MOD END
 
         if (way.getTag("duration") != null) {
             try {
@@ -267,10 +262,6 @@ public class OSMReader {
         // also add all custom areas as artificial tag
         way.setTag("custom_areas", customAreas);
     }
-
-    // ORS-GH MOD START
-    protected void recordExactWayDistance(ReaderWay way) {}
-    // ORS-GH MOD END
 
     /**
      * This method is called for each segment an OSM way is split into during the second pass of {@link WaySegmentParser}.
