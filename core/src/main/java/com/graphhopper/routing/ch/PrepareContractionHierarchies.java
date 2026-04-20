@@ -20,7 +20,6 @@ package com.graphhopper.routing.ch;
 import com.carrotsearch.hppc.IntContainer;
 import com.carrotsearch.hppc.cursors.IntCursor;
 import com.graphhopper.coll.MinHeapWithUpdate;
-import com.graphhopper.routing.util.AbstractAlgoPreparation;
 import com.graphhopper.routing.util.TraversalMode;
 import com.graphhopper.routing.weighting.Weighting;
 import com.graphhopper.storage.*;
@@ -50,7 +49,7 @@ import static com.graphhopper.util.Helper.nf;
  *
  * @author Peter Karich
  */
-public class PrepareContractionHierarchies extends AbstractAlgoPreparation {
+public class PrepareContractionHierarchies {
 // ORS-GH MOD START change access from private to public
     public final Logger logger = LoggerFactory.getLogger(getClass());
     public final CHConfig chConfig;
@@ -77,6 +76,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation {
     public PMap pMap = new PMap();
 // ORS-GH MOD END
     private int checkCounter;
+    private boolean prepared = false;
 
     public static PrepareContractionHierarchies fromGraphHopperStorage(GraphHopperStorage ghStorage, CHConfig chConfig) {
         return new PrepareContractionHierarchies(ghStorage, chConfig);
@@ -135,8 +135,10 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation {
         return this;
     }
 
-    @Override
-    public void doSpecificWork() {
+    public void doWork() {
+        if (prepared)
+            throw new IllegalStateException("Call doWork only once!");
+        prepared = true;
         if (!graph.isFrozen()) {
             throw new IllegalStateException("Given GraphHopperStorage has not been frozen yet");
         }
@@ -299,10 +301,9 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation {
             IntContainer neighbors = contractNode(polledNode, level);
             level++;
 
-            if (sortedNodes.size() < nodesToAvoidContract) {
+            if (sortedNodes.size() < nodesToAvoidContract)
                 // skipped nodes are already set to maxLevel
                 break;
-            }
 
             // there might be multiple edges going to the same neighbor nodes -> only calculate priority once per node
             for (IntCursor neighbor : neighbors) {
@@ -319,7 +320,7 @@ public class PrepareContractionHierarchies extends AbstractAlgoPreparation {
 // ORS-GH MOD START add hook
         finishContractionHook();
 // ORS-GH MOD END
-        
+
         nodeContractor.finishContraction();
 
         logHeuristicStats(updateCounter);
