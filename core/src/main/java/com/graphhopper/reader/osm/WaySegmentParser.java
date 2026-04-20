@@ -262,6 +262,10 @@ public class WaySegmentParser {
             for (LongCursor node : way.getNodes())
                 segment.add(new SegmentNode(node.value, nodeData.getId(node.value)));
             wayPreprocessor.preprocessWay(getPoint(segment.get(0).id), getPoint(segment.get(segment.size() - 1).id), way);
+            // ORS-GH MOD START - way preprocessor might have changed the way tags, so we need to check the filter again
+            if (!wayFilter.test(way))
+                return;
+            // ORS-GH MOD END
             splitWayAtJunctionsAndEmptySections(segment, way);
         }
 
