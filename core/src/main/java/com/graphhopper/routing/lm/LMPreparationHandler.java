@@ -159,10 +159,6 @@ public class LMPreparationHandler {
         return lmProfiles;
     }
 
-    public int size() {
-        return preparations.size();
-    }
-
     public List<PrepareLandmarks> getPreparations() {
         return preparations;
     }
