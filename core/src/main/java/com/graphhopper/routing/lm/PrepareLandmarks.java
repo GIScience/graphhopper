@@ -105,10 +105,6 @@ public class PrepareLandmarks {
         return lms;
     }
 
-    public int getSubnetworksWithLandmarks() {
-        return lms.getSubnetworksWithLandmarks();
-    }
-
     public LMConfig getLMConfig() {
         return lmConfig;
     }
