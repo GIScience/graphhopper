@@ -93,7 +93,7 @@ public class GraphHopper {
     private int defaultSegmentSize = -1;
     private String ghLocation = "";
     private DAType dataAccessDefaultType = DAType.RAM_STORE;
-    private final LinkedHashMap<String, String> dataAccessConfig = new LinkedHashMap<>();
+    private LinkedHashMap<String, String> dataAccessConfig = new LinkedHashMap<>();
     private boolean sortGraph = false;
     private boolean elevation = false;
     private LockFactory lockFactory = new NativeFSLockFactory();

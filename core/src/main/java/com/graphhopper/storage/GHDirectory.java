@@ -20,6 +20,8 @@ package com.graphhopper.storage;
 import java.io.File;
 import java.util.HashMap;
 import java.util.*;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
 import static com.graphhopper.storage.DAType.RAM_INT;
 import static com.graphhopper.storage.DAType.RAM_INT_STORE;
