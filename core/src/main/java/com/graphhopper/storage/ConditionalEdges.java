@@ -32,7 +32,7 @@ public class ConditionalEdges implements Storable<ConditionalEdges> {
             String name = this.encodingManager.getKey(encoder, this.encoderName);
             if (this.encodingManager.hasEncodedValue(name)) {
                 String mapName = this.encoderName + "_" + encoder.toString();
-                ConditionalEdgesMap conditionalEdgesMap = new ConditionalEdgesMap(mapName, conditionalIndex, dir.find(mapName));
+                ConditionalEdgesMap conditionalEdgesMap = new ConditionalEdgesMap(mapName, conditionalIndex, dir.create(mapName));
                 conditionalEdgesMaps.put(encoder.toString(), conditionalEdgesMap);
             }
         }

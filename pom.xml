@@ -5,8 +5,7 @@
 
     <groupId>com.github.GIScience.graphhopper</groupId>
     <artifactId>graphhopper-parent</artifactId>
-    <name>GraphHopper Parent Project</name>
-    <version>4.12-SNAPSHOT</version>
+    <name>GraphHopper Parent Project</name><version>4.13-SNAPSHOT</version>
     <packaging>pom</packaging>
     <url>https://www.graphhopper.com</url>
     <inceptionYear>2012</inceptionYear>
@@ -219,7 +218,7 @@
                     <artifactId>maven-surefire-plugin</artifactId>
                     <version>2.22.2</version>
                     <configuration>
-                        <argLine>-Xmx180m -Xms180m -Duser.language=en</argLine>
+                        <argLine>-Xmx190m -Xms190m -Duser.language=en</argLine>
                     </configuration>
                 </plugin>
 

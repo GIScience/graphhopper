@@ -5,36 +5,36 @@
     <modelVersion>4.0.0</modelVersion>
     <artifactId>graphhopper-web-bundle</artifactId>
     <packaging>jar</packaging>
-    <version>4.9-SNAPSHOT</version>
+    <version>4.13-SNAPSHOT</version>
     <name>GraphHopper Dropwizard Bundle</name>
     <description>Use the GraphHopper routing engine as a web-service</description>
 
     <parent>
         <groupId>com.github.GIScience.graphhopper</groupId>
         <artifactId>graphhopper-parent</artifactId>
-        <version>4.9-SNAPSHOT</version>
+        <version>4.13-SNAPSHOT</version>
     </parent>
 
     <dependencies>
         <dependency>
             <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-web-api</artifactId>
-            <version>4.9-SNAPSHOT</version>
+            <version>4.13-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-core</artifactId>
-            <version>4.9-SNAPSHOT</version>
+            <version>4.13-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-reader-gtfs</artifactId>
-            <version>4.9-SNAPSHOT</version>
+            <version>4.13-SNAPSHOT</version>
         </dependency>
         <dependency>
             <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>graphhopper-map-matching</artifactId>
-            <version>4.9-SNAPSHOT</version>
+            <version>4.13-SNAPSHOT</version>
         </dependency>
 
         <!-- required for JDK9 -->
@@ -118,7 +118,7 @@
         <dependency>
             <groupId>com.github.GIScience.graphhopper</groupId>
             <artifactId>directions-api-client-hc</artifactId>
-            <version>4.9-SNAPSHOT</version>
+            <version>4.13-SNAPSHOT</version>
             <scope>test</scope>
         </dependency>
     </dependencies>

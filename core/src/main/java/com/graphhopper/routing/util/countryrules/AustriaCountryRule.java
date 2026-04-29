@@ -21,10 +21,10 @@ package com.graphhopper.routing.util.countryrules;
 import com.graphhopper.reader.ReaderWay;
 import com.graphhopper.routing.ev.RoadAccess;
 import com.graphhopper.routing.ev.RoadClass;
+import com.graphhopper.routing.ev.Toll;
 import com.graphhopper.routing.util.TransportationMode;
 
 public class AustriaCountryRule implements CountryRule {
-    public final static AustriaCountryRule RULE = new AustriaCountryRule();
 
     @Override
     public double getMaxSpeed(ReaderWay readerWay, TransportationMode transportationMode, double currentMaxSpeed) {
@@ -71,5 +71,19 @@ public class AustriaCountryRule implements CountryRule {
             default:
                 return RoadAccess.YES;
         }
+    }
+    
+    @Override
+    public Toll getToll(ReaderWay readerWay, TransportationMode transportationMode, Toll currentToll) {
+        if (!transportationMode.isMotorVehicle() || currentToll != Toll.MISSING) {
+            return currentToll;
+        }
+
+        RoadClass roadClass = RoadClass.find(readerWay.getTag("highway", ""));
+        if (roadClass == RoadClass.MOTORWAY || roadClass == RoadClass.TRUNK) {
+            return Toll.ALL;
+        }
+        
+        return currentToll;
     }
 }

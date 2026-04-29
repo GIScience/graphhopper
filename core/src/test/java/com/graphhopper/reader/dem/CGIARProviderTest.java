@@ -89,7 +89,7 @@ public class CGIARProviderTest {
         });
         assertEquals(0, instance.getEle(46, -20), 1);
 
-        // file not found => small!
+        // file not found
         assertTrue(file.exists());
         assertEquals(1048676, file.length());
 

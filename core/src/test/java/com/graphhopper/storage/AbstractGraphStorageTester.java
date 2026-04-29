@@ -26,7 +26,6 @@ import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
-import java.io.Closeable;
 import java.io.File;
 import java.util.ArrayList;
 import java.util.List;
@@ -117,7 +116,7 @@ public abstract class AbstractGraphStorageTester {
     public void testSetTooBigDistance_435() {
         graph = createGHStorage();
 
-        double maxDist = BaseGraph.MAX_DIST;
+        double maxDist = BaseGraphNodesAndEdges.MAX_DIST;
         EdgeIteratorState edge1 = GHUtility.setSpeed(60, true, true, carEncoder, graph.edge(0, 1).setDistance(maxDist));
         assertEquals(maxDist, edge1.getDistance(), 1);
 
@@ -658,6 +657,7 @@ public abstract class AbstractGraphStorageTester {
 
     @Test
     public void test8AndMoreBytesForEdgeFlags() {
+        Directory dir = new RAMDirectory();
         List<FlagEncoder> list = new ArrayList<>();
         list.add(new CarFlagEncoder(29, 0.001, 0) {
             @Override
@@ -667,7 +667,7 @@ public abstract class AbstractGraphStorageTester {
         });
         list.add(new CarFlagEncoder(29, 0.001, 0));
         EncodingManager manager = EncodingManager.create(list);
-        graph = new GraphHopperStorage(new RAMDirectory(), manager, false).create(defaultSize);
+        graph = new GraphHopperStorage(dir, manager, false).create(defaultSize);
 
         EdgeIteratorState edge = graph.edge(0, 1);
         IntsRef intsRef = manager.createEdgeFlags();
@@ -677,7 +677,8 @@ public abstract class AbstractGraphStorageTester {
         assertEquals(Integer.MAX_VALUE / 3, edge.getFlags().ints[0]);
         graph.close();
 
-        graph = new GraphHopperStorage(new RAMDirectory(), manager, false).create(defaultSize);
+        dir = new RAMDirectory();
+        graph = new GraphHopperStorage(dir, manager, false).create(defaultSize);
 
         DecimalEncodedValue avSpeed0Enc = manager.getDecimalEncodedValue(getKey("car0", "average_speed"));
         BooleanEncodedValue access0Enc = manager.getBooleanEncodedValue(getKey("car0", "access"));

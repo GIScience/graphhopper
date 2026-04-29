@@ -22,13 +22,13 @@ import com.graphhopper.reader.ReaderWay;
 import com.graphhopper.routing.ev.MaxSpeed;
 import com.graphhopper.routing.ev.RoadAccess;
 import com.graphhopper.routing.ev.RoadClass;
+import com.graphhopper.routing.ev.Toll;
 import com.graphhopper.routing.util.TransportationMode;
 
 /**
  * @author Robin Boldt
  */
 public class GermanyCountryRule implements CountryRule {
-    public final static GermanyCountryRule RULE = new GermanyCountryRule();
 
     /**
      * In Germany there are roads without a speed limit. For these roads, this method
@@ -79,5 +79,19 @@ public class GermanyCountryRule implements CountryRule {
             default:
                 return RoadAccess.YES;
         }
+    }
+    
+    @Override
+    public Toll getToll(ReaderWay readerWay, TransportationMode transportationMode, Toll currentToll) {
+        if (!transportationMode.isMotorVehicle() || currentToll != Toll.MISSING) {
+            return currentToll;
+        }
+        
+        RoadClass roadClass = RoadClass.find(readerWay.getTag("highway", ""));
+        if (roadClass == RoadClass.MOTORWAY || roadClass == RoadClass.TRUNK || roadClass == RoadClass.PRIMARY) {
+            return Toll.HGV;
+        }
+        
+        return currentToll;
     }
 }

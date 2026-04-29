@@ -58,7 +58,7 @@ public abstract class AbstractDirectoryTester {
     @Test
     public void testNoErrorForDACreate() {
         Directory dir = createDir();
-        da = dir.find("testing");
+        da = dir.create("testing");
         da.create(100);
         da.flush();
     }

@@ -53,9 +53,9 @@ public class PtGraph implements GtfsReader.PtGraphOut {
 //        nodes = dir.create("pt_nodes", dir.getDefaultType("pt_nodes", true), -1);
 //        edges = dir.create("pt_edges", dir.getDefaultType("pt_edges", true), -1);
 //        attrs = dir.create("pt_edge_attrs", dir.getDefaultType("pt_edge_attrs", true), -1);
-        nodes = dir.find("pt_nodes", DAType.getPreferredInt(dir.getDefaultType()));
-        edges = dir.find("pt_edges", DAType.getPreferredInt(dir.getDefaultType()));
-        attrs = dir.find("pt_edge_attrs", DAType.getPreferredInt(dir.getDefaultType()));
+        nodes = dir.create("pt_nodes", DAType.getPreferredInt(dir.getDefaultType()));
+        edges = dir.create("pt_edges", DAType.getPreferredInt(dir.getDefaultType()));
+        attrs = dir.create("pt_edge_attrs", DAType.getPreferredInt(dir.getDefaultType()));
 
         nodeEntryBytes = 8;
 

@@ -33,6 +33,7 @@ import com.graphhopper.util.Helper;
 import com.graphhopper.util.shapes.GHPoint;
 import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
 
 import java.io.File;
@@ -335,7 +336,7 @@ public class RoutingAlgorithmWithOSMTest {
         // 1.
         queries.add(new Query(43.727687, 7.418737, 43.730864, 7.420771, 2599, 115));
         queries.add(new Query(43.74958, 7.436566, 43.728499, 7.417907, 4180, 165));
-        queries.add(new Query(43.739213, 7.427806, 43.728677, 7.41016, 3244, 177));
+        queries.add(new Query(43.739213, 7.427806, 43.728677, 7.41016, 3244, 179));
         // 4. avoid tunnel(s)!
         queries.add(new Query(43.739662, 7.424355, 43.733802, 7.413433, 2436, 112));
         GraphHopper hopper = createHopper(MONACO, new Profile("bike2").setVehicle("bike2").setWeighting("fastest"));
@@ -599,7 +600,7 @@ public class RoutingAlgorithmWithOSMTest {
     @Test
     public void testMonacoParallel() throws InterruptedException {
         GraphHopper hopper = createHopper(MONACO, new Profile("car").setVehicle("car").setWeighting("shortest"));
-        hopper.setWayPointMaxDistance(0);
+        hopper.getReaderConfig().setMaxWayPointDistance(0);
         hopper.getRouterConfig().setSimplifyResponse(false);
         hopper.importOrLoad();
         final List<Query> queries = createMonacoCarQueries();
@@ -687,7 +688,7 @@ public class RoutingAlgorithmWithOSMTest {
                 setGraphHopperLocation(GH_LOCATION);
         hopper.getRouterConfig().setSimplifyResponse(false);
         hopper.setMinNetworkSize(0);
-        hopper.setWayPointMaxDistance(0);
+        hopper.getReaderConfig().setMaxWayPointDistance(0);
         hopper.getLMPreparationHandler().setLMProfiles(new LMProfile(profiles[0].getName()));
         hopper.getCHPreparationHandler().setCHProfiles(new CHProfile(profiles[0].getName()));
         return hopper;

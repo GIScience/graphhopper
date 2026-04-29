@@ -34,8 +34,6 @@ import java.net.SocketTimeoutException;
  * @author Robin Boldt
  */
 public abstract class AbstractSRTMElevationProvider extends TileBasedElevationProvider {
-
-    private static final BitUtil BIT_UTIL = BitUtil.BIG;
     private final int DEFAULT_WIDTH;
     private final int MIN_LAT;
     private final int MAX_LAT;
@@ -102,7 +100,7 @@ public abstract class AbstractSRTMElevationProvider extends TileBasedElevationPr
             if (fileName == null)
                 return 0;
 
-            DataAccess heights = getDirectory().find("dem" + intKey);
+            DataAccess heights = getDirectory().create("dem" + intKey);
             boolean loadExisting = false;
             try {
                 loadExisting = heights.loadExisting();
@@ -146,7 +144,8 @@ public abstract class AbstractSRTMElevationProvider extends TileBasedElevationPr
             byte[] bytes = getByteArrayFromFile(lat, lon);
             heights.create(bytes.length);
             for (int bytePos = 0; bytePos < bytes.length; bytePos += 2) {
-                short val = BIT_UTIL.toShort(bytes, bytePos);
+                // we need big endianess to read the SRTM files
+                short val = BitUtil.BIG.toShort(bytes, bytePos);
                 if (val < -1000 || val > 12000)
                     val = Short.MIN_VALUE;
 

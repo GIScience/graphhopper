@@ -92,7 +92,7 @@ public class ConditionalEdgesMap implements Storable<ConditionalEdgesMap> {
         if (edgesCount > 0)
             throw new AssertionError("The conditional restrictions storage must be initialized only once.");
 
-        this.edges = dir.find(name);
+        this.edges = dir.create(name);
     }
 
     public ConditionalEdgesMap create(long byteCount) {

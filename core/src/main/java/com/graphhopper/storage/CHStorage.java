@@ -20,6 +20,8 @@ package com.graphhopper.storage;
 
 import com.graphhopper.routing.ch.NodeOrderingProvider;
 import com.graphhopper.routing.ch.PrepareEncoder;
+import com.graphhopper.util.Constants;
+import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.Helper;
 
 import java.util.Locale;
@@ -31,7 +33,7 @@ import static com.graphhopper.util.Helper.nf;
  * DataAccess-based storage for CH shortcuts. Stores shortcuts and CH levels sequentially using two DataAccess objects
  * and gives read/write access to the different shortcut and node fields.
  * <p>
- * This can be seen as an extension to a base graph: We assign a CH level to each nodes and add additional edges to
+ * This can be seen as an extension to a base graph: We assign a CH level to each node and add additional edges to
  * the graph ('shortcuts'). The shortcuts need to be ordered in a certain way, but this is not enforced here.
  *
  * @see CHStorageBuilder to build a valid storage that can be used for routing
@@ -58,7 +60,7 @@ public class CHStorage {
     private int nodeCount = -1;
 
     private boolean edgeBased;
-    // some shortcuts exceed the maximum storable weight and we count them here
+    // some shortcuts exceed the maximum storable weight, and we count them here
     private int numShortcutsExceedingWeight;
 
     // use this to report shortcuts with too small weights
@@ -75,10 +77,10 @@ public class CHStorage {
 
     public CHStorage(Directory dir, String name, int segmentSize, boolean edgeBased, String type) {
         this.isTypeCore =  CHConfig.TYPE_CORE.equals(type);
-        this.nodesCH = dir.create("nodes_" + type + "_" + name, DAType.getPreferredInt(dir.getDefaultType()), segmentSize);
-        this.shortcuts = dir.create("shortcuts_" + type + "_" + name, DAType.getPreferredInt(dir.getDefaultType()), segmentSize);
 // ORS-GH MOD END
         this.edgeBased = edgeBased;
+        this.nodesCH = dir.create("nodes_ch_" + name, dir.getDefaultType("nodes_ch_" + name, true), segmentSize);
+        this.shortcuts = dir.create("shortcuts_" + name, dir.getDefaultType("shortcuts_" + name, true), segmentSize);
         // shortcuts are stored consecutively using this layout (the last two entries only exist for edge-based):
         // NODEA | NODEB | WEIGHT | SKIP_EDGE1 | SKIP_EDGE2 | S_ORIG_FIRST | S_ORIG_LAST
         S_NODEA = 0;
@@ -159,18 +161,20 @@ public class CHStorage {
 
     public void flush() {
         // nodes
-        nodesCH.setHeader(0, nodeCount);
-        nodesCH.setHeader(4, nodeCHEntryBytes);
-// ORS-GH MOD START added header field
-        nodesCH.setHeader(8, coreNodeCount);
-// ORS-GH MOD END
+        nodesCH.setHeader(0, Constants.VERSION_NODE_CH);
+        nodesCH.setHeader(4, nodeCount);
+        nodesCH.setHeader(8, nodeCHEntryBytes);
+        // ORS-GH MOD START added header field
+        nodesCH.setHeader(12, coreNodeCount);
+        // ORS-GH MOD END
         nodesCH.flush();
 
         // shortcuts
-        shortcuts.setHeader(0, shortcutCount);
-        shortcuts.setHeader(4, shortcutEntryBytes);
-        shortcuts.setHeader(8, numShortcutsExceedingWeight);
-        shortcuts.setHeader(12, edgeBased ? 1 : 0);
+        shortcuts.setHeader(0, Constants.VERSION_SHORTCUT);
+        shortcuts.setHeader(4, shortcutCount);
+        shortcuts.setHeader(8, shortcutEntryBytes);
+        shortcuts.setHeader(12, numShortcutsExceedingWeight);
+        shortcuts.setHeader(16, edgeBased ? 1 : 0);
         shortcuts.flush();
     }
 
@@ -179,17 +183,21 @@ public class CHStorage {
             return false;
 
         // nodes
-        nodeCount = nodesCH.getHeader(0);
-        nodeCHEntryBytes = nodesCH.getHeader(4);
+        int nodesCHVersion = nodesCH.getHeader(0);
+        GHUtility.checkDAVersion(nodesCH.getName(), Constants.VERSION_NODE_CH, nodesCHVersion);
+        nodeCount = nodesCH.getHeader(4);
+        nodeCHEntryBytes = nodesCH.getHeader(8);
 // ORS-GH MOD START added header field
-        coreNodeCount = nodesCH.getHeader(8);
+        coreNodeCount = nodesCH.getHeader(12);
 // ORS-GH MOD END
 
         // shortcuts
-        shortcutCount = shortcuts.getHeader(0);
-        shortcutEntryBytes = shortcuts.getHeader(4);
-        numShortcutsExceedingWeight = shortcuts.getHeader(8);
-        edgeBased = shortcuts.getHeader(12) == 1;
+        int shortcutsVersion = shortcuts.getHeader(0);
+        GHUtility.checkDAVersion(shortcuts.getName(), Constants.VERSION_SHORTCUT, shortcutsVersion);
+        shortcutCount = shortcuts.getHeader(4);
+        shortcutEntryBytes = shortcuts.getHeader(8);
+        numShortcutsExceedingWeight = shortcuts.getHeader(12);
+        edgeBased = shortcuts.getHeader(16) == 1;
 
         return true;
     }
