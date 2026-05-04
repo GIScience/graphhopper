@@ -77,10 +77,10 @@ public class CHStorage {
 
     public CHStorage(Directory dir, String name, int segmentSize, boolean edgeBased, String type) {
         this.isTypeCore =  CHConfig.TYPE_CORE.equals(type);
-// ORS-GH MOD END
         this.edgeBased = edgeBased;
-        this.nodesCH = dir.create("nodes_ch_" + name, dir.getDefaultType("nodes_ch_" + name, true), segmentSize);
-        this.shortcuts = dir.create("shortcuts_" + name, dir.getDefaultType("shortcuts_" + name, true), segmentSize);
+        this.nodesCH = dir.create("nodes_" + type + "_" + name, dir.getDefaultType("nodes_" + type + "_" + name, true), segmentSize);
+        this.shortcuts = dir.create("shortcuts_" + type + "_" + name, dir.getDefaultType("shortcuts_" + type + "_" + name, true), segmentSize);
+// ORS-GH MOD END
         // shortcuts are stored consecutively using this layout (the last two entries only exist for edge-based):
         // NODEA | NODEB | WEIGHT | SKIP_EDGE1 | SKIP_EDGE2 | S_ORIG_FIRST | S_ORIG_LAST
         S_NODEA = 0;
