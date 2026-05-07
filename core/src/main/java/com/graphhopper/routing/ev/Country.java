@@ -240,7 +240,14 @@ public enum Country {
     YEM("Yemen", "YE"),
     ZAF("South Africa", "ZA"),
     ZMB("Zambia", "ZM"),
-    ZWE("Zimbabwe", "ZW");
+    // ORS-GH MOD START additional ORS-specific territories
+    ZWE("Zimbabwe", "ZW"),
+    // the following values are for testing purposes only
+    XXA("Area 1", "XA"),
+    XXB("Area 2", "XB"),
+    XXC("Area 3", "XC"),
+    XXD("Area 4", "XD");
+    // ORS-GH MOD END
 
     public static final String KEY = "country";
 

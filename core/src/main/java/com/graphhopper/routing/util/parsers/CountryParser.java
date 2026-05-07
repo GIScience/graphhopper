@@ -41,6 +41,10 @@ public class CountryParser implements TagParser {
     @Override
     public IntsRef handleWayTags(IntsRef edgeFlags, ReaderWay way, boolean ferry, IntsRef relationFlags) {
         Country country = way.getTag("country", Country.MISSING);
+        // ORS-GH MOD START override with country information set by ORS
+        if (way.hasTag("ors:country"))
+            country = way.getTag("ors:country", Country.MISSING);
+        // ORS-GH MOD END
         countryEnc.setEnum(false, edgeFlags, country);
         return edgeFlags;
     }
