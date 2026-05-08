@@ -265,8 +265,13 @@ public class WaySegmentParser {
             // ORS-GH MOD START - way preprocessor might have changed the way tags, so we need to check the filter again
             if (!wayFilter.test(way))
                 return;
+            try {
+                splitWayAtJunctionsAndEmptySections(segment, way);
+            } catch (Exception e) {
+                LOGGER.error("Error while processing way " + way.getId() + ": " + e.getMessage());
+                throw e;
+            }
             // ORS-GH MOD END
-            splitWayAtJunctionsAndEmptySections(segment, way);
         }
 
         private void splitWayAtJunctionsAndEmptySections(List<SegmentNode> fullSegment, ReaderWay way) {
