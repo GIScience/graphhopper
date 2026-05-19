@@ -28,6 +28,9 @@ import java.util.List;
 
 public class CountryParser implements TagParser {
     private final EnumEncodedValue<Country> countryEnc;
+    // ORS-GH MOD START
+    public static final String KEY_ORS_COUNTRY = "ors:country";
+    // ORS-GH MOD END
 
     public CountryParser() {
         this.countryEnc = Country.create();
@@ -42,8 +45,8 @@ public class CountryParser implements TagParser {
     public IntsRef handleWayTags(IntsRef edgeFlags, ReaderWay way, boolean ferry, IntsRef relationFlags) {
         Country country = way.getTag("country", Country.MISSING);
         // ORS-GH MOD START override with country information set by ORS
-        if (way.hasTag("ors:country"))
-            country = way.getTag("ors:country", Country.MISSING);
+        if (way.hasTag(KEY_ORS_COUNTRY))
+            country = way.getTag(KEY_ORS_COUNTRY, Country.MISSING);
         // ORS-GH MOD END
         countryEnc.setEnum(false, edgeFlags, country);
         return edgeFlags;
