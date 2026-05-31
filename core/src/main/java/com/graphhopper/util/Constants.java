@@ -73,6 +73,10 @@ public class Constants {
     public static final int VERSION_GEOMETRY = 6;
     public static final int VERSION_LOCATION_IDX = 5;
     public static final int VERSION_STRING_IDX = 6;
+    // ORS-GH BACKPORT START: KVStorage (from graphhopper/graphhopper master, 2026-05-29)
+    // Remove this constant when upgrading to a GH version that includes KVStorage natively.
+    public static final int VERSION_KV_STORAGE = 1;
+    // ORS-GH BACKPORT END
     /**
      * The version without the snapshot string
      */

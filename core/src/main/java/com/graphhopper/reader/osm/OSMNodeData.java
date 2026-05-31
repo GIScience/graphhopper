@@ -22,22 +22,21 @@ import com.graphhopper.coll.GHLongIntBTree;
 import com.graphhopper.coll.LongIntMap;
 import com.graphhopper.reader.PillarInfo;
 import com.graphhopper.reader.ReaderNode;
+import com.graphhopper.search.KVStorage;
 import com.graphhopper.storage.Directory;
 import com.graphhopper.util.PointAccess;
 import com.graphhopper.util.PointList;
 import com.graphhopper.util.shapes.GHPoint3D;
 
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.Map;
 import java.util.function.IntUnaryOperator;
 
-import static java.util.Collections.emptyMap;
-
 /**
- * This class stores OSM node data while reading an OSM file in {@link WaySegmentParser}. It is not trivial to do this
+ * This class stores OSM node data while reading an OSM file in
+ * {@link WaySegmentParser}. It is not trivial to do this
  * in a memory-efficient way. We use the following approach:
+ * 
  * <pre>
  * - For each OSM node we store an integer id that points to the nodes coordinates. We use both positive and negative
  *   ids to make use of the full integer range (~4 billion nodes). We separate nodes into (potential) tower nodes and
@@ -52,6 +51,18 @@ import static java.util.Collections.emptyMap;
  * - We store an additional mapping between OSM node Ids and tag indices that point into a list of node tags. We use
  *   a different mapping, because we store node tags for only a small fraction of all OSM nodes.
  * </pre>
+ *
+ * ORS-GH BACKPORT (2026-05-29): Barrier node tag storage has been changed from
+ * {@code List<Map<String,Object>>} to {@link com.graphhopper.search.KVStorage}
+ * to eliminate
+ * per-node HashMap overhead. KVStorage is backported from
+ * upstream graphhopper/graphhopper master and is not yet in our GH fork
+ * version.
+ * When upgrading the fork to a GH version that contains KVStorage natively,
+ * remove all
+ * {@code ORS-GH BACKPORT} markers in this file plus {@code KVStorage.java} and
+ * {@code Constants.VERSION_KV_STORAGE} — they will conflict with the upstream
+ * versions.
  */
 // ORS-GH MOD START expose to ORS
 public class OSMNodeData {
@@ -73,8 +84,13 @@ public class OSMNodeData {
     // yet and a value of -2 means there was an entry but it was removed again
     private final LongIntMap nodeTagIndicesByOsmNodeIds;
 
-    // stores node tags
-    private final List<Map<String, Object>> nodeTags;
+    // ORS-GH BACKPORT START: KVStorage for barrier node tags (backported from graphhopper/graphhopper master, 2026-05-29)
+    // Replaces the previous List<Map<String,Object>> which caused ~20x per-node heap overhead.
+    // See KVStorage.java header for full upgrade instructions.
+    // When upgrading to a GH version that includes KVStorage natively, remove this field
+    // and all ORS-GH BACKPORT markers in this file, then use the upstream OSMNodeData.
+    private final KVStorage nodeKVStorage;
+    // ORS-GH BACKPORT END
 
     private int nextTowerId = 0;
     private int nextPillarId = 0;
@@ -90,7 +106,8 @@ public class OSMNodeData {
         pillarNodes = new PillarInfo(towerNodes.is3D(), directory);
 
         nodeTagIndicesByOsmNodeIds = new GHLongIntBTree(200);
-        nodeTags = new ArrayList<>();
+        // ORS-GH BACKPORT: initialise KVStorage for efficient tag serialisation
+        nodeKVStorage = new KVStorage(directory, false).create(100);
     }
 
     public boolean is3D() {
@@ -138,7 +155,8 @@ public class OSMNodeData {
      * @return the number of nodes for which we store tags
      */
     public long getTaggedNodeCount() {
-        return nodeTags.size();
+        // ORS-GH BACKPORT: nodeTagIndicesByOsmNodeIds tracks entries; nodeTags list is gone
+        return nodeTagIndicesByOsmNodeIds.getSize();
     }
 
     /**
@@ -241,32 +259,45 @@ public class OSMNodeData {
         pointList.add(lat, lon, ele);
     }
 
+    // ORS-GH BACKPORT START: KVStorage tag storage
     public void setTags(ReaderNode node) {
         int tagIndex = nodeTagIndicesByOsmNodeIds.get(node.getId());
         if (tagIndex == -2)
             throw new IllegalStateException("Cannot add tags after they were removed");
         else if (tagIndex == -1) {
-            nodeTagIndicesByOsmNodeIds.put(node.getId(), nodeTags.size());
-            nodeTags.add(node.getTags());
+            long pointer = nodeKVStorage.addTags(node.getTags());
+            long shiftedPointer = pointer >> KVStorage.ALIGNMENT_SHIFT;
+            if (shiftedPointer > Integer.MAX_VALUE)
+                throw new IllegalStateException("Node tag storage overflow, pointer=" + pointer);
+            nodeTagIndicesByOsmNodeIds.put(node.getId(), (int) shiftedPointer);
         } else {
             throw new IllegalStateException("Cannot add tags twice, duplicate node OSM ID: " + node.getId());
         }
     }
+    // ORS-GH BACKPORT END
 
+    // ORS-GH BACKPORT START: KVStorage tag retrieval
     public Map<String, Object> getTags(long osmNodeId) {
-        int tagIndex = nodeTagIndicesByOsmNodeIds.get(osmNodeId);
-        if (tagIndex < 0)
+        int shiftedIndex = nodeTagIndicesByOsmNodeIds.get(osmNodeId);
+        if (shiftedIndex < 0)
             return Collections.emptyMap();
-        return nodeTags.get(tagIndex);
+        long tagIndex = (long) shiftedIndex << KVStorage.ALIGNMENT_SHIFT;
+        return nodeKVStorage.getMap(tagIndex);
     }
+    // ORS-GH BACKPORT END
 
+    // ORS-GH BACKPORT START: KVStorage is append-only, mark removed index instead
     public void removeTags(long osmNodeId) {
-        int prev = nodeTagIndicesByOsmNodeIds.put(osmNodeId, -2);
-        nodeTags.set(prev, emptyMap());
+        // KVStorage is append-only; the serialised entry stays in storage but will never be
+        // accessed again because getTags() checks shiftedIndex < 0 first.
+        nodeTagIndicesByOsmNodeIds.put(osmNodeId, -2);
     }
+    // ORS-GH BACKPORT END
 
     public void release() {
         pillarNodes.clear();
+        // ORS-GH BACKPORT: free KVStorage backing DataAccess (transient, not persisted)
+        nodeKVStorage.clear();
     }
 
     public int towerNodeToId(int towerId) {
