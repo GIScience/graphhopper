@@ -211,7 +211,15 @@ public class LMPreparationHandler {
                 LOGGER.info(count + "/" + preparationsToPrepare.size() + " calling LM prepare.doWork for " + prepare.getLMConfig().getWeighting() + " ... (" + getMemInfo() + ")");
                 prepared.set(true);
                 Thread.currentThread().setName(name);
-                prepare.doWork();
+                // ORS-GH MOD START structured [ORS-LM-CRASH] diagnostic log before re-throw so
+                // Dagster can identify which profile crashed
+                try {
+                    prepare.doWork();
+                } catch (Exception e) {
+                    LOGGER.error("[ORS-LM-CRASH] LM Preparation crashed for profile=" + name + " weighting=" + prepare.getLMConfig().getWeighting().getName() + " message=" + e.getMessage(), e);
+                    throw e;
+                }
+                // ORS-GH MOD END
                 if (closeEarly)
                     prepare.close();
                 LOGGER.info("LM {} finished {}", name, getMemInfo());
