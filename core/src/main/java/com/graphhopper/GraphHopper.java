@@ -623,10 +623,22 @@ public class GraphHopper {
      */
     public GraphHopper importOrLoad() {
         if (!load()) {
+            // ORS-GH MOD START stage marker distinguishing fresh build from load
+            logger.info("[ORS-BUILD-STAGE] stage=graph_fresh_build action=start osm_file={}", osmFile);
+            // ORS-GH MOD END
             printInfo();
             process(false);
+            // ORS-GH MOD START
+            logger.info("[ORS-BUILD-STAGE] stage=graph_fresh_build action=end nodes={} edges={}", Helper.nf(ghStorage.getNodes()), Helper.nf(ghStorage.getEdges()));
+            // ORS-GH MOD END
         } else {
+            // ORS-GH MOD START
+            logger.info("[ORS-BUILD-STAGE] stage=graph_load_existing action=start location={}", ghLocation);
+            // ORS-GH MOD END
             printInfo();
+            // ORS-GH MOD START
+            logger.info("[ORS-BUILD-STAGE] stage=graph_load_existing action=end nodes={} edges={}", Helper.nf(ghStorage.getNodes()), Helper.nf(ghStorage.getEdges()));
+            // ORS-GH MOD END
         }
         return this;
     }
