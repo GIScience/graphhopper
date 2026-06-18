@@ -599,7 +599,17 @@ public class EncodingManager implements EncodedValueLookup {
      * @param relationFlags The preprocessed relation flags is used to influence the way properties.
      */
     public IntsRef handleWayTags(ReaderWay way, AcceptWay acceptWay, IntsRef relationFlags) {
+        // ORS-GH MOD START additional parameters to provide from/to node ids to tag parsers
+        return handleWayTags(-1, -1, way, acceptWay, relationFlags);
+    }
+
+    public IntsRef handleWayTags(int fromIndex, int toIndex, ReaderWay way, AcceptWay acceptWay, IntsRef relationFlags) {
         IntsRef edgeFlags = createEdgeFlags();
+        // modified handler must be called before regular processing to ensure that "ors:country" tags set by the BorderParser are available for the downstream CountryParser
+        for (TagParser parser : edgeTagParsers) {
+            parser.handleWayTags(fromIndex, toIndex, edgeFlags, way, acceptWay.isFerry(), relationFlags);
+        }
+        // ORS-GH MOD END
         for (TagParser parser : edgeTagParsers) {
             parser.handleWayTags(edgeFlags, way, acceptWay.isFerry(), relationFlags);
         }

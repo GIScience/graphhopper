@@ -33,4 +33,10 @@ public interface TagParser {
     void createEncodedValues(EncodedValueLookup lookup, List<EncodedValue> registerNewEncodedValue);
 
     IntsRef handleWayTags(IntsRef edgeFlags, ReaderWay way, boolean ferry, IntsRef relationFlags);
+
+    // ORS-GH MOD START additional method to provide from/to node ids
+    default IntsRef handleWayTags(int from, int to, IntsRef edgeFlags, ReaderWay way, boolean ferry, IntsRef relationFlags) {
+        return edgeFlags;
+    }
+    // ORS-GH MOD END
 }

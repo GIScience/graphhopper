@@ -328,7 +328,9 @@ public class OSMReader {
             throw new IllegalStateException("unaccepted way: " + way.getId());
 
         IntsRef relationFlags = getRelFlagsMap(way.getId());
-        IntsRef edgeFlags = encodingManager.handleWayTags(way, acceptWay, relationFlags);
+        // ORS-GH MOD START additional parameters for from and to node ids
+        IntsRef edgeFlags = encodingManager.handleWayTags(fromIndex, toIndex, way, acceptWay, relationFlags);
+        // ORS-GH MOD END
         if (edgeFlags.isEmpty())
             return;
 
