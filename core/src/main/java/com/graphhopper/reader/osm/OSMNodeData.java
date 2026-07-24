@@ -19,8 +19,9 @@
 package com.graphhopper.reader.osm;
 
 // ORS-GH MOD START
-import com.carrotsearch.hppc.IntLongMap;
-import com.graphhopper.coll.GHIntLongHashMap;
+import com.carrotsearch.hppc.LongArrayList;
+import com.carrotsearch.hppc.LongLongMap;
+import com.graphhopper.coll.GHLongLongHashMap;
 // ORS-GH MOD END
 import com.graphhopper.coll.GHLongIntBTree;
 import com.graphhopper.coll.LongIntMap;
@@ -69,7 +70,8 @@ public class OSMNodeData {
     // this map stores our internal node id for each OSM node
     private final LongIntMap idsByOsmNodeIds;
     // ORS-GH MOD START - mapping in the other direction: internal node IDs to OSM node IDs
-    private final IntLongMap osmNodeIdsByIds;
+    private final LongArrayList osmNodeIdsByIds;
+    private final LongLongMap originalOsmNodeIds;
     // ORS-GH MOD END
 
     // here we store node coordinates, separated for pillar and tower nodes
@@ -94,7 +96,8 @@ public class OSMNodeData {
         // entries.
         idsByOsmNodeIds = new GHLongIntBTree(200);
         // ORS-GH MOD START
-        osmNodeIdsByIds = new GHIntLongHashMap(200);
+        osmNodeIdsByIds = new LongArrayList(200);
+        originalOsmNodeIds = new GHLongLongHashMap(200);
         // ORS-GH MOD END
         towerNodes = nodeAccess;
         pillarNodes = new PillarInfo(towerNodes.is3D(), directory);
@@ -175,7 +178,7 @@ public class OSMNodeData {
         int id = towerNodeToId(nextTowerId);
         idsByOsmNodeIds.put(osmId, id);
         // ORS-GH MOD START
-        addOsmNodeIdById(id, osmId);
+        addOsmNodeIdById(nextTowerId, osmId);
         // ORS-GH MOD END
         nextTowerId++;
         return id;
@@ -185,9 +188,6 @@ public class OSMNodeData {
         pillarNodes.setNode(nextPillarId, lat, lon, ele);
         int id = pillarNodeToId(nextPillarId);
         idsByOsmNodeIds.put(osmId, id);
-        // ORS-GH MOD START
-        addOsmNodeIdById(id, osmId);
-        // ORS-GH MOD END
         nextPillarId++;
         return id;
     }
@@ -202,12 +202,12 @@ public class OSMNodeData {
         if (point == null)
             throw new IllegalStateException("Cannot copy node : " + node.osmNodeId + ", because it is missing");
         final long newOsmId = nextArtificialOSMNodeId++;
+        // ORS-GH MOD START
+        originalOsmNodeIds.put(newOsmId, node.osmNodeId);
+        // ORS-GH MOD END
         if (idsByOsmNodeIds.put(newOsmId, INTERMEDIATE_NODE) != EMPTY_NODE)
             throw new IllegalStateException("Artificial osm node id already exists: " + newOsmId);
         int id = addPillarNode(newOsmId, point.getLat(), point.getLon(), point.getEle());
-        // ORS-GH MOD START
-        addOsmNodeIdById(id, node.osmNodeId);
-        // ORS-GH MOD END
         return new SegmentNode(newOsmId, id);
     }
 
@@ -222,12 +222,7 @@ public class OSMNodeData {
             throw new IllegalStateException("Pillar node was already converted to tower node: " + id);
 
         pillarNodes.setNode(pillar, Double.MAX_VALUE, Double.MAX_VALUE, Double.MAX_VALUE);
-        // ORS-GH MOD START
-        int newId = addTowerNode(osmNodeId, lat, lon, ele);
-        if (osmNodeId < 0)
-            osmNodeIdsByIds.put(newId, getOsmId(id));
-        return newId;
-        // ORS-GH MOD END
+        return addTowerNode(osmNodeId, lat, lon, ele);
     }
 
     public GHPoint3D getCoordinates(int id) {
@@ -310,15 +305,15 @@ public class OSMNodeData {
     }
 
     // ORS-GH MOD START - additional methods
-    private void addOsmNodeIdById(int id, long osmId) {
+    private void addOsmNodeIdById(int towerId, long osmId) {
         if (osmId < 0) {
-            return;// skip artificial OSM node IDs, because they are not part of the original OSM data
+            osmId = originalOsmNodeIds.get(osmId);
         }
-        osmNodeIdsByIds.put(id, osmId);
+        osmNodeIdsByIds.insert(towerId, osmId);
     }
 
-    public long getOsmId(int id) {
-        return osmNodeIdsByIds.get(id);
+    public long getOsmId(int towerId) {
+        return osmNodeIdsByIds.get(towerId);
     }
     // ORS-GH MOD END
 }
