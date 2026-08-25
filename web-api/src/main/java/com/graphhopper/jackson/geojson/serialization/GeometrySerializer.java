@@ -16,6 +16,7 @@ import java.util.Arrays;
 
 import static com.graphhopper.jackson.geojson.GeoJson.*;
 
+// ORS-GH MOD - new class
 public class GeometrySerializer extends ValueSerializer<Geometry> {
 
     @Override

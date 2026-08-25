@@ -12,6 +12,7 @@ import org.locationtech.jts.geom.*;
 import tools.jackson.core.Version;
 import tools.jackson.databind.module.SimpleModule;
 
+// ORS-GH MOD - new class
 public class JtsModule extends SimpleModule {
 
     public JtsModule() {

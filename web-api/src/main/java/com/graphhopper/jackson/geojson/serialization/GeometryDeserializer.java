@@ -13,6 +13,7 @@ import tools.jackson.databind.DeserializationContext;
 import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ValueDeserializer;
 
+// ORS-GH MOD - new class
 public class GeometryDeserializer<T extends Geometry> extends ValueDeserializer<T> {
 
     private final GeometryParser<T> geometryParser;

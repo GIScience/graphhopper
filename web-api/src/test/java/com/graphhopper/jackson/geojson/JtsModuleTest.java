@@ -20,6 +20,7 @@ import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
+// ORS-GH MOD - new class
 class JtsModuleTest {
     private static final GeometryFactory GF = new GeometryFactory();
     private final JsonMapper mapper = JsonMapper.builder().addModule(new JtsModule()).build();

@@ -12,6 +12,7 @@ import tools.jackson.databind.JsonNode;
 
 import static com.graphhopper.jackson.geojson.GeoJson.GEOMETRIES;
 
+// ORS-GH MOD - new class
 public class GeometryCollectionParser extends BaseParser implements GeometryParser<GeometryCollection> {
 
     private final GenericGeometryParser genericGeometriesParser;

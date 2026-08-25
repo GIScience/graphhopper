@@ -8,6 +8,7 @@ import tools.jackson.databind.json.JsonMapper;
  * This is separate from {@link com.graphhopper.jackson.Jackson}, which builds the full mapper used for
  * the HTTP API request/response format.
  */
+// ORS-GH MOD - new class
 public class GeoJsonMapper {
 
     private GeoJsonMapper() {

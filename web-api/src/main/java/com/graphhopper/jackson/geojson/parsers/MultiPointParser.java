@@ -11,6 +11,7 @@ import tools.jackson.databind.JsonNode;
 
 import static com.graphhopper.jackson.geojson.GeoJson.COORDINATES;
 
+// ORS-GH MOD - new class
 public class MultiPointParser extends BaseParser implements GeometryParser<MultiPoint> {
 
     public MultiPointParser(GeometryFactory geometryFactory) {

@@ -5,6 +5,7 @@
  */
 package com.graphhopper.jackson.geojson;
 
+// ORS-GH MOD - new class
 public class GeoJson {
     public static final String POINT = "Point";
     public static final String LINE_STRING = "LineString";

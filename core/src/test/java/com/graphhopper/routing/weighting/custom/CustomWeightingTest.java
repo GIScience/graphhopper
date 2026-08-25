@@ -237,7 +237,9 @@ class CustomWeightingTest {
         CustomModel vehicleModel = new CustomModel();
         vehicleModel.addToPriority(If("in_custom1", MULTIPLY, 0.5));
 
+        // ORS-GH MOD START use the Jackson 3 GeoJsonMapper instead of a Jackson 2 ObjectMapper + JtsModule
         JsonMapper om = GeoJsonMapper.newObjectMapper();
+        // ORS-GH MOD END
         JsonFeature json = om.readValue("{ \"geometry\":{ \"type\": \"Polygon\", \"coordinates\": " +
                 "[[[11.5818,50.0126], [11.5818,50.0119], [11.5861,50.0119], [11.5861,50.0126], [11.5818,50.0126]]] }}", JsonFeature.class);
         vehicleModel.getAreas().put("custom1", json);

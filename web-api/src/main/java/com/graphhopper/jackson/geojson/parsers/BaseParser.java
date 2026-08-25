@@ -7,6 +7,7 @@ package com.graphhopper.jackson.geojson.parsers;
 
 import org.locationtech.jts.geom.GeometryFactory;
 
+// ORS-GH MOD - new class
 public class BaseParser {
 
     protected GeometryFactory geometryFactory;
