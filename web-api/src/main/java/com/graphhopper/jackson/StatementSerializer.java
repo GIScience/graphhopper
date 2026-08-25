@@ -17,19 +17,19 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.graphhopper.json.Statement;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.io.IOException;
-
-class StatementSerializer extends JsonSerializer<Statement> {
+// ORS-GH MOD - ported to Jackson 3
+class StatementSerializer extends ValueSerializer<Statement> {
     @Override
-    public void serialize(Statement statement, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(Statement statement, JsonGenerator jsonGenerator, SerializationContext serializationContext) throws JacksonException {
         jsonGenerator.writeStartObject();
-        jsonGenerator.writeStringField(statement.getKeyword().getName(), statement.getCondition());
-        jsonGenerator.writeNumberField(statement.getOperation().getName(), statement.getValue());
+        jsonGenerator.writeStringProperty(statement.getKeyword().getName(), statement.getCondition());
+        jsonGenerator.writeNumberProperty(statement.getOperation().getName(), statement.getValue());
         jsonGenerator.writeEndObject();
     }
 }

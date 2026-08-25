@@ -17,21 +17,22 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.graphhopper.util.exceptions.GHException;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
-import java.io.IOException;
 import java.util.List;
 
-public class MultiExceptionSerializer extends JsonSerializer<MultiException> {
+// ORS-GH MOD - ported to Jackson 3
+public class MultiExceptionSerializer extends ValueSerializer<MultiException> {
 
     @Override
-    public void serialize(MultiException e, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(MultiException e, JsonGenerator jsonGenerator, SerializationContext serializationContext) throws JacksonException {
         List<Throwable> errors = e.getErrors();
         ObjectNode json = JsonNodeFactory.instance.objectNode();
         json.put("message", getMessage(errors.get(0)));
@@ -44,7 +45,7 @@ public class MultiExceptionSerializer extends JsonSerializer<MultiException> {
                 ((GHException) t).getDetails().forEach(error::putPOJO);
             }
         }
-        jsonGenerator.writeObject(json);
+        jsonGenerator.writePOJO(json);
     }
 
     private static String getMessage(Throwable t) {

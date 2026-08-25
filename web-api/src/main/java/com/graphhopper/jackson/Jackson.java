@@ -17,22 +17,23 @@
  */
 package com.graphhopper.jackson;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.fasterxml.jackson.annotation.JsonInclude;
-import com.fasterxml.jackson.databind.ObjectMapper;
-import com.fasterxml.jackson.databind.PropertyNamingStrategy;
+import com.graphhopper.jackson.geojson.JtsModule;
+import tools.jackson.databind.PropertyNamingStrategies;
+import tools.jackson.databind.json.JsonMapper;
 
+// ORS-GH MOD - ported to Jackson 3
 public class Jackson {
 
-    public static ObjectMapper newObjectMapper() {
-        return initObjectMapper(new ObjectMapper());
+    public static JsonMapper newObjectMapper() {
+        return initObjectMapper(JsonMapper.builder()).build();
     }
 
-    public static ObjectMapper initObjectMapper(ObjectMapper objectMapper) {
-        objectMapper.registerModule(new GraphHopperModule());
-        objectMapper.registerModule(new JtsModule());
-        objectMapper.setPropertyNamingStrategy(PropertyNamingStrategy.SNAKE_CASE);
-        objectMapper.setSerializationInclusion(JsonInclude.Include.NON_NULL);
-        return objectMapper;
+    public static JsonMapper.Builder initObjectMapper(JsonMapper.Builder builder) {
+        builder.addModule(new GraphHopperModule());
+        builder.addModule(new JtsModule());
+        builder.propertyNamingStrategy(PropertyNamingStrategies.SNAKE_CASE);
+        builder.changeDefaultPropertyInclusion(v -> v.withValueInclusion(JsonInclude.Include.NON_NULL));
+        return builder;
     }
 }

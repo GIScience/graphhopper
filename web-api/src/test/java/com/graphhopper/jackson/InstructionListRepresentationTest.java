@@ -18,11 +18,11 @@
 
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.util.*;
 import org.junit.jupiter.api.Test;
+// ORS-GH MOD - ported to Jackson 3
+import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.util.Collections;
 import java.util.Locale;
 import java.util.Map;
@@ -32,8 +32,8 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 public class InstructionListRepresentationTest {
 
     @Test
-    public void testRoundaboutJsonIntegrity() throws IOException {
-        ObjectMapper objectMapper = Jackson.newObjectMapper();
+    public void testRoundaboutJsonIntegrity() {
+        JsonMapper objectMapper = Jackson.newObjectMapper();
         InstructionList il = new InstructionList(usTR);
 
         PointList pl = new PointList();
@@ -52,8 +52,8 @@ public class InstructionListRepresentationTest {
 
     // Roundabout with unknown dir of rotation
     @Test
-    public void testRoundaboutJsonNaN() throws IOException {
-        ObjectMapper objectMapper = Jackson.newObjectMapper();
+    public void testRoundaboutJsonNaN() {
+        JsonMapper objectMapper = Jackson.newObjectMapper();
         InstructionList il = new InstructionList(usTR);
 
         PointList pl = new PointList();

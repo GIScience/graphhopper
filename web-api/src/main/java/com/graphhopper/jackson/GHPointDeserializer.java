@@ -17,16 +17,16 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import com.graphhopper.util.shapes.GHPoint;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.io.IOException;
-
-class GHPointDeserializer extends JsonDeserializer<GHPoint> {
+// ORS-GH MOD - ported to Jackson 3
+class GHPointDeserializer extends ValueDeserializer<GHPoint> {
     @Override
-    public GHPoint deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public GHPoint deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {
         double[] bounds = jsonParser.readValueAs(double[].class);
         return GHPoint.fromJson(bounds);
     }

@@ -17,17 +17,16 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
 import org.locationtech.jts.geom.Envelope;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.io.IOException;
-
-class JtsEnvelopeDeserializer extends JsonDeserializer<Envelope> {
+// ORS-GH MOD - ported to Jackson 3
+class JtsEnvelopeDeserializer extends ValueDeserializer<Envelope> {
     @Override
-    public Envelope deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws IOException {
+    public Envelope deserialize(JsonParser jsonParser, DeserializationContext deserializationContext) throws JacksonException {
         double[] bounds = jsonParser.readValueAs(double[].class);
         return new Envelope(bounds[0], bounds[2], bounds[1], bounds[3]);
     }

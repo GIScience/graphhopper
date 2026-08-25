@@ -17,22 +17,22 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonParseException;
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.graphhopper.util.details.PathDetail;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.core.exc.StreamReadException;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.io.IOException;
-
-public class PathDetailDeserializer extends JsonDeserializer<PathDetail> {
+// ORS-GH MOD - ported to Jackson 3
+public class PathDetailDeserializer extends ValueDeserializer<PathDetail> {
 
     @Override
-    public PathDetail deserialize(JsonParser jp, DeserializationContext ctxt) throws IOException {
+    public PathDetail deserialize(JsonParser jp, DeserializationContext ctxt) throws JacksonException {
         JsonNode pathDetail = jp.readValueAsTree();
         if (pathDetail.size() != 3)
-            throw new JsonParseException(jp, "PathDetail array must have exactly 3 entries but was " + pathDetail.size());
+            throw new StreamReadException(jp, "PathDetail array must have exactly 3 entries but was " + pathDetail.size());
 
         JsonNode from = pathDetail.get(0);
         JsonNode to = pathDetail.get(1);
@@ -46,9 +46,9 @@ public class PathDetailDeserializer extends JsonDeserializer<PathDetail> {
         else if (val.canConvertToLong())
             pd = new PathDetail(val.asLong());
         else if (val.isTextual())
-            pd = new PathDetail(val.asText());
+            pd = new PathDetail(val.asString());
         else
-            throw new JsonParseException(jp, "Unsupported type of PathDetail value " + pathDetail.getNodeType().name());
+            throw new StreamReadException(jp, "Unsupported type of PathDetail value " + pathDetail.getNodeType().name());
 
         pd.setFirst(from.asInt());
         pd.setLast(to.asInt());
