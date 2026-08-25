@@ -70,6 +70,19 @@
             <groupId>com.fasterxml.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
+
+        <!-- Jackson 3, for reading plain GeoJSON border/landmark-splitting files via
+             com.graphhopper.jackson.geojson.GeoJsonMapper. Coexists with the Jackson 2
+             dependencies above until the rest of this module is ported (see the
+             Jackson 3 migration plan). -->
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-core</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>tools.jackson.core</groupId>
+            <artifactId>jackson-databind</artifactId>
+        </dependency>
         <dependency>
             <groupId>ch.poole</groupId>
             <artifactId>ConditionalRestrictionParser</artifactId>

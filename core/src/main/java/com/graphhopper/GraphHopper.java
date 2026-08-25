@@ -17,11 +17,10 @@
  */
 package com.graphhopper;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.config.CHProfile;
 import com.graphhopper.config.LMProfile;
 import com.graphhopper.config.Profile;
+import com.graphhopper.jackson.geojson.GeoJsonMapper;
 import com.graphhopper.reader.dem.*;
 import com.graphhopper.reader.osm.OSMReader;
 import com.graphhopper.reader.osm.conditional.DateRangeParser;
@@ -50,6 +49,7 @@ import com.graphhopper.util.Parameters.Routing;
 import com.graphhopper.util.details.PathDetailsBuilderFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.BufferedReader;
 import java.io.File;
@@ -723,8 +723,7 @@ public class GraphHopper {
     // ORS-GH MOD END
 
     private List<CustomArea> readCustomAreas() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JtsModule());
+        JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
         final Path bordersDirectory = Paths.get(customAreasDirectory);
         List<JsonFeatureCollection> jsonFeatureCollections = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(bordersDirectory, "*.{geojson,json}")) {

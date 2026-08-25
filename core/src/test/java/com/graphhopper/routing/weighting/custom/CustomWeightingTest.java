@@ -1,7 +1,6 @@
 package com.graphhopper.routing.weighting.custom;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import com.graphhopper.jackson.geojson.GeoJsonMapper;
 import com.graphhopper.json.Statement;
 import com.graphhopper.routing.ev.*;
 import com.graphhopper.routing.util.CarFlagEncoder;
@@ -20,6 +19,7 @@ import com.graphhopper.util.GHUtility;
 import com.graphhopper.util.JsonFeature;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import tools.jackson.databind.json.JsonMapper;
 
 import static com.graphhopper.json.Statement.*;
 import static com.graphhopper.json.Statement.Op.LIMIT;
@@ -237,7 +237,7 @@ class CustomWeightingTest {
         CustomModel vehicleModel = new CustomModel();
         vehicleModel.addToPriority(If("in_custom1", MULTIPLY, 0.5));
 
-        ObjectMapper om = new ObjectMapper().registerModule(new JtsModule());
+        JsonMapper om = GeoJsonMapper.newObjectMapper();
         JsonFeature json = om.readValue("{ \"geometry\":{ \"type\": \"Polygon\", \"coordinates\": " +
                 "[[[11.5818,50.0126], [11.5818,50.0119], [11.5861,50.0119], [11.5861,50.0126], [11.5818,50.0126]]] }}", JsonFeature.class);
         vehicleModel.getAreas().put("custom1", json);
