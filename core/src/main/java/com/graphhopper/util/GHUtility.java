@@ -17,12 +17,11 @@
  */
 package com.graphhopper.util;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
 import com.carrotsearch.hppc.IntArrayList;
 import com.carrotsearch.hppc.IntIndexedContainer;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.coll.GHBitSet;
 import com.graphhopper.coll.GHBitSetImpl;
+import com.graphhopper.jackson.geojson.GeoJsonMapper;
 import com.graphhopper.routing.ev.*;
 import com.graphhopper.routing.util.*;
 import com.graphhopper.routing.weighting.Weighting;
@@ -32,6 +31,7 @@ import com.graphhopper.storage.index.Snap;
 import com.graphhopper.util.shapes.BBox;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.IOException;
 import java.io.InputStreamReader;
@@ -746,8 +746,7 @@ public class GHUtility {
      * Reads the country borders from the countries.geojson resource file
      */
     public static List<CustomArea> readCountries() {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JtsModule());
+        JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
         try (Reader reader = new InputStreamReader(GHUtility.class.getResourceAsStream("/com/graphhopper/countries/countries.geojson"), StandardCharsets.UTF_8)) {
             JsonFeatureCollection jsonFeatureCollection = objectMapper.readValue(reader, JsonFeatureCollection.class);
             return jsonFeatureCollection.getFeatures().stream()

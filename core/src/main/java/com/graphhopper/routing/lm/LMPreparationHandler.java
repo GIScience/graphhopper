@@ -17,10 +17,9 @@
  */
 package com.graphhopper.routing.lm;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.GraphHopperConfig;
 import com.graphhopper.config.LMProfile;
+import com.graphhopper.jackson.geojson.GeoJsonMapper;
 import com.graphhopper.routing.util.AreaIndex;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.StorableProperties;
@@ -30,6 +29,8 @@ import com.graphhopper.util.JsonFeatureCollection;
 import com.graphhopper.util.Parameters.Landmark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -272,8 +273,7 @@ public class LMPreparationHandler {
     // ORS-GH MOD END
 
     private JsonFeatureCollection loadLandmarkSplittingFeatureCollection(String splitAreaLocation) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JtsModule());
+        JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
         URL builtinSplittingFile = LandmarkStorage.class.getResource("map.geo.json");
         try (Reader reader = splitAreaLocation.isEmpty() ?
                 new InputStreamReader(builtinSplittingFile.openStream(), UTF_CS) :
@@ -285,7 +285,7 @@ public class LMPreparationHandler {
                 LOGGER.info("Loaded landmark splitting collection from {}", splitAreaLocation);
             }
             return result;
-        } catch (IOException e) {
+        } catch (IOException | JacksonException e) {
             LOGGER.error("Problem while reading border map GeoJSON. Skipping this.", e);
             return null;
         }
