@@ -8,6 +8,7 @@ package com.graphhopper.jackson.geojson.parsers;
 import org.locationtech.jts.geom.Geometry;
 import tools.jackson.databind.JsonNode;
 
+// ORS-GH MOD - new interface
 public interface GeometryParser<T extends Geometry> {
 
     T geometryFromJson(JsonNode node);

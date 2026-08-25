@@ -14,6 +14,7 @@ import java.util.Map;
 
 import static com.graphhopper.jackson.geojson.GeoJson.*;
 
+// ORS-GH MOD - new class
 public class GenericGeometryParser extends BaseParser implements GeometryParser<Geometry> {
 
     private final Map<String, GeometryParser<? extends Geometry>> parsers;

@@ -723,7 +723,9 @@ public class GraphHopper {
     // ORS-GH MOD END
 
     private List<CustomArea> readCustomAreas() {
+        // ORS-GH MOD START use the Jackson 3 GeoJsonMapper instead of a Jackson 2 ObjectMapper + JtsModule
         JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
+        // ORS-GH MOD END
         final Path bordersDirectory = Paths.get(customAreasDirectory);
         List<JsonFeatureCollection> jsonFeatureCollections = new ArrayList<>();
         try (DirectoryStream<Path> stream = Files.newDirectoryStream(bordersDirectory, "*.{geojson,json}")) {

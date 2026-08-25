@@ -273,7 +273,9 @@ public class LMPreparationHandler {
     // ORS-GH MOD END
 
     private JsonFeatureCollection loadLandmarkSplittingFeatureCollection(String splitAreaLocation) {
+        // ORS-GH MOD START use the Jackson 3 GeoJsonMapper instead of a Jackson 2 ObjectMapper + JtsModule
         JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
+        // ORS-GH MOD END
         URL builtinSplittingFile = LandmarkStorage.class.getResource("map.geo.json");
         try (Reader reader = splitAreaLocation.isEmpty() ?
                 new InputStreamReader(builtinSplittingFile.openStream(), UTF_CS) :
@@ -285,7 +287,9 @@ public class LMPreparationHandler {
                 LOGGER.info("Loaded landmark splitting collection from {}", splitAreaLocation);
             }
             return result;
+        // ORS-GH MOD START also catch JacksonException, which Jackson 3 no longer derives from IOException
         } catch (IOException | JacksonException e) {
+        // ORS-GH MOD END
             LOGGER.error("Problem while reading border map GeoJSON. Skipping this.", e);
             return null;
         }

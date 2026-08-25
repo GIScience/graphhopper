@@ -746,7 +746,9 @@ public class GHUtility {
      * Reads the country borders from the countries.geojson resource file
      */
     public static List<CustomArea> readCountries() {
+        // ORS-GH MOD START use the Jackson 3 GeoJsonMapper instead of a Jackson 2 ObjectMapper + JtsModule
         JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
+        // ORS-GH MOD END
         try (Reader reader = new InputStreamReader(GHUtility.class.getResourceAsStream("/com/graphhopper/countries/countries.geojson"), StandardCharsets.UTF_8)) {
             JsonFeatureCollection jsonFeatureCollection = objectMapper.readValue(reader, JsonFeatureCollection.class);
             return jsonFeatureCollection.getFeatures().stream()

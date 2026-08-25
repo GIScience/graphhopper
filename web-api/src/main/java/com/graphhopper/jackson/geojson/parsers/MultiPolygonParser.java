@@ -12,6 +12,7 @@ import tools.jackson.databind.JsonNode;
 
 import static com.graphhopper.jackson.geojson.GeoJson.COORDINATES;
 
+// ORS-GH MOD - new class
 public class MultiPolygonParser extends BaseParser implements GeometryParser<MultiPolygon> {
 
     private final PolygonParser helperParser;
