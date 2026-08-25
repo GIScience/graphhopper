@@ -16,33 +16,27 @@
     </parent>
 
     <dependencies>
+        <!-- Jackson 3. jackson-annotations intentionally stays on its Jackson 2.x
+             coordinate/package, shared unchanged between Jackson 2 and 3. -->
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-core</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.core</groupId>
+            <groupId>tools.jackson.core</groupId>
             <artifactId>jackson-databind</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.graphhopper.external</groupId>
-            <artifactId>jackson-datatype-jts</artifactId>
+            <groupId>com.fasterxml.jackson.core</groupId>
+            <artifactId>jackson-annotations</artifactId>
         </dependency>
         <dependency>
-            <groupId>com.fasterxml.jackson.dataformat</groupId>
+            <groupId>tools.jackson.dataformat</groupId>
             <artifactId>jackson-dataformat-xml</artifactId>
         </dependency>
-
-        <!-- Jackson 3, for the new com.graphhopper.jackson.geojson module. Coexists with the
-             Jackson 2 dependencies above until the rest of this module is ported (see the
-             Jackson 3 migration plan). -->
         <dependency>
-            <groupId>tools.jackson.core</groupId>
-            <artifactId>jackson-core</artifactId>
-        </dependency>
-        <dependency>
-            <groupId>tools.jackson.core</groupId>
-            <artifactId>jackson-databind</artifactId>
+            <groupId>org.locationtech.jts</groupId>
+            <artifactId>jts-core</artifactId>
         </dependency>
     </dependencies>
 

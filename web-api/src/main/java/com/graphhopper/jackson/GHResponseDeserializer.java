@@ -17,23 +17,22 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.GHResponse;
 import com.graphhopper.ResponsePath;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.io.IOException;
-
-public class GHResponseDeserializer extends JsonDeserializer<GHResponse> {
+// ORS-GH MOD - ported to Jackson 3
+public class GHResponseDeserializer extends ValueDeserializer<GHResponse> {
     @Override
-    public GHResponse deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public GHResponse deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
         GHResponse ghResponse = new GHResponse();
         JsonNode treeNode = p.readValueAsTree();
         for (JsonNode path : treeNode.get("paths")) {
-            ResponsePath responsePath = ((ObjectMapper) p.getCodec()).convertValue(path, ResponsePath.class);
+            ResponsePath responsePath = ctxt.readTreeAsValue(path, ResponsePath.class);
             ghResponse.add(responsePath);
         }
         return ghResponse;

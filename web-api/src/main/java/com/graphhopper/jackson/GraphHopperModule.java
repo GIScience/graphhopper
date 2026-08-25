@@ -17,7 +17,6 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.databind.module.SimpleModule;
 import com.graphhopper.GHRequest;
 import com.graphhopper.GHResponse;
 import com.graphhopper.ResponsePath;
@@ -26,7 +25,9 @@ import com.graphhopper.util.InstructionList;
 import com.graphhopper.util.details.PathDetail;
 import com.graphhopper.util.shapes.GHPoint;
 import org.locationtech.jts.geom.Envelope;
+import tools.jackson.databind.module.SimpleModule;
 
+// ORS-GH MOD - ported to Jackson 3
 public class GraphHopperModule extends SimpleModule {
 
     public GraphHopperModule() {

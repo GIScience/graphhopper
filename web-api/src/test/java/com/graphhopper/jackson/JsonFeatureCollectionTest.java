@@ -17,7 +17,6 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.util.JsonFeature;
 import com.graphhopper.util.JsonFeatureCollection;
 import com.graphhopper.util.PointList;
@@ -26,8 +25,9 @@ import org.locationtech.jts.geom.Coordinate;
 import org.locationtech.jts.geom.Envelope;
 import org.locationtech.jts.geom.GeometryFactory;
 import org.locationtech.jts.geom.LineString;
+// ORS-GH MOD - ported to Jackson 3
+import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.Map;
@@ -38,10 +38,10 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
  * @author Peter Karich
  */
 public class JsonFeatureCollectionTest {
-    private final ObjectMapper objectMapper = Jackson.newObjectMapper();
+    private final JsonMapper objectMapper = Jackson.newObjectMapper();
 
     @Test
-    public void testSerialization() throws IOException {
+    public void testSerialization() {
         GeometryFactory geometryFactory = new GeometryFactory();
 
         JsonFeatureCollection jsonFeatureCollection = new JsonFeatureCollection();
@@ -87,7 +87,7 @@ public class JsonFeatureCollectionTest {
     }
 
     @Test
-    public void testDeserialization() throws IOException {
+    public void testDeserialization() {
         JsonFeatureCollection data = objectMapper.readValue(getClass().getClassLoader().getResourceAsStream("fixtures/geojson1.json"), JsonFeatureCollection.class);
         assertEquals(3, data.getFeatures().size());
 

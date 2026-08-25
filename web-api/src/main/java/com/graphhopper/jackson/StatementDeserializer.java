@@ -1,20 +1,21 @@
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonParser;
-import com.fasterxml.jackson.databind.DeserializationContext;
-import com.fasterxml.jackson.databind.JsonDeserializer;
-import com.fasterxml.jackson.databind.JsonNode;
 import com.graphhopper.json.Statement;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonParser;
+import tools.jackson.databind.DeserializationContext;
+import tools.jackson.databind.JsonNode;
+import tools.jackson.databind.ValueDeserializer;
 
-import java.io.IOException;
 import java.util.Arrays;
 import java.util.stream.Collectors;
 
 import static com.graphhopper.json.Statement.Keyword.*;
 
-public class StatementDeserializer extends JsonDeserializer<Statement> {
+// ORS-GH MOD - ported to Jackson 3
+public class StatementDeserializer extends ValueDeserializer<Statement> {
     @Override
-    public Statement deserialize(JsonParser p, DeserializationContext ctxt) throws IOException {
+    public Statement deserialize(JsonParser p, DeserializationContext ctxt) throws JacksonException {
         JsonNode treeNode = p.readValueAsTree();
         Statement.Op jsonOp = null;
         double value = Double.NaN;
@@ -37,12 +38,12 @@ public class StatementDeserializer extends JsonDeserializer<Statement> {
             throw new IllegalArgumentException("Value of operation " + jsonOp.getName() + " is not a number");
 
         if (treeNode.has(IF.getName()))
-            return Statement.If(treeNode.get(IF.getName()).asText(), jsonOp, value);
+            return Statement.If(treeNode.get(IF.getName()).asString(), jsonOp, value);
         else if (treeNode.has(ELSEIF.getName()))
-            return Statement.ElseIf(treeNode.get(ELSEIF.getName()).asText(), jsonOp, value);
+            return Statement.ElseIf(treeNode.get(ELSEIF.getName()).asString(), jsonOp, value);
         else if (treeNode.has(ELSE.getName())) {
             JsonNode elseNode = treeNode.get(ELSE.getName());
-            if (elseNode.isNull() || elseNode.isValueNode() && elseNode.asText().isEmpty())
+            if (elseNode.isNull() || elseNode.isValueNode() && elseNode.asString().isEmpty())
                 return Statement.Else(jsonOp, value);
             throw new IllegalArgumentException("else cannot have expression but was " + treeNode.get(ELSE.getName()));
         }

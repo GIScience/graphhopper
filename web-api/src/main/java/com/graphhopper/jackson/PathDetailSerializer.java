@@ -17,18 +17,18 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonGenerationException;
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.graphhopper.util.details.PathDetail;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.core.exc.StreamWriteException;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.io.IOException;
-
-public class PathDetailSerializer extends JsonSerializer<PathDetail> {
+// ORS-GH MOD - ported to Jackson 3
+public class PathDetailSerializer extends ValueSerializer<PathDetail> {
 
     @Override
-    public void serialize(PathDetail value, JsonGenerator gen, SerializerProvider serializers) throws IOException {
+    public void serialize(PathDetail value, JsonGenerator gen, SerializationContext serializers) throws JacksonException {
         gen.writeStartArray();
 
         gen.writeNumber(value.getFirst());
@@ -47,7 +47,7 @@ public class PathDetailSerializer extends JsonSerializer<PathDetail> {
         else if (value.getValue() == null)
             gen.writeNull();
         else
-            throw new JsonGenerationException("Unsupported type for PathDetail.value" + value.getValue().getClass(), gen);
+            throw new StreamWriteException(gen, "Unsupported type for PathDetail.value" + value.getValue().getClass());
 
         gen.writeEndArray();
     }

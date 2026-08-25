@@ -18,23 +18,24 @@
 
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.ResponsePath;
 import org.junit.jupiter.api.Test;
-
-import java.io.IOException;
+import tools.jackson.databind.json.JsonMapper;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public class RouteResourceRepresentationTest {
 
     @Test
-    public void testUnknownInstructionSign() throws IOException {
+    public void testUnknownInstructionSign() {
         // Modified the sign though
-        ObjectMapper objectMapper = Jackson.newObjectMapper();
-        JsonNode json = objectMapper.readTree("{\"instructions\":[{\"distance\":1.073,\"sign\":741,\"interval\":[0,1],\"text\":\"Continue onto A 81\",\"time\":32,\"street_name\":\"A 81\"},{\"distance\":0,\"sign\":4,\"interval\":[1,1],\"text\":\"Finish!\",\"time\":0,\"street_name\":\"\"}],\"descend\":0,\"ascend\":0,\"distance\":1.073,\"bbox\":[8.676286,48.354446,8.676297,48.354453],\"weight\":0.032179,\"time\":32,\"points_encoded\":true,\"points\":\"gfcfHwq}s@}c~AAA?\",\"snapped_waypoints\":\"gfcfHwq}s@}c~AAA?\"}");
-        ResponsePath responsePath = ResponsePathDeserializer.createResponsePath(objectMapper, json, true, true);
+        JsonMapper objectMapper = Jackson.newObjectMapper();
+        // ORS-GH MOD START go through the full deserializer (registered on the mapper) instead of
+        // calling ResponsePathDeserializer#createResponsePath directly, since it now needs a
+        // DeserializationContext that only exists during an active parse
+        String json = "{\"instructions\":[{\"distance\":1.073,\"sign\":741,\"interval\":[0,1],\"text\":\"Continue onto A 81\",\"time\":32,\"street_name\":\"A 81\"},{\"distance\":0,\"sign\":4,\"interval\":[1,1],\"text\":\"Finish!\",\"time\":0,\"street_name\":\"\"}],\"descend\":0,\"ascend\":0,\"distance\":1.073,\"bbox\":[8.676286,48.354446,8.676297,48.354453],\"weight\":0.032179,\"time\":32,\"points_encoded\":true,\"points\":\"gfcfHwq}s@}c~AAA?\",\"snapped_waypoints\":\"gfcfHwq}s@}c~AAA?\"}";
+        ResponsePath responsePath = objectMapper.readValue(json, ResponsePath.class);
+        // ORS-GH MOD END
 
         assertEquals(741, responsePath.getInstructions().get(0).getSign());
         assertEquals("Continue onto A 81", responsePath.getInstructions().get(0).getName());
