@@ -18,6 +18,11 @@
         <maven.compiler.source>${java.version}</maven.compiler.source>
         <maven.compiler.target>${java.version}</maven.compiler.target>
 
+        <!-- Jackson 3 for the new GeoJSON/JTS module (com.graphhopper.jackson.geojson); jackson-annotations
+             intentionally stays on its Jackson 2.x groupId/version, shared unchanged between Jackson 2 and 3. -->
+        <jackson3.version>3.2.2</jackson3.version>
+        <jackson-annotations.version>2.22</jackson-annotations.version>
+
         <org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>4</org-netbeans-modules-editor-indent.CodeStyle.project.indent-shift-width>
         <org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>4</org-netbeans-modules-editor-indent.CodeStyle.project.spaces-per-tab>
         <org-netbeans-modules-editor-indent.CodeStyle.project.tab-size>8</org-netbeans-modules-editor-indent.CodeStyle.project.tab-size>
@@ -97,6 +102,21 @@
                 <groupId>com.graphhopper.external</groupId>
                 <artifactId>jackson-datatype-jts</artifactId>
                 <version>2.14</version>
+            </dependency>
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-core</artifactId>
+                <version>${jackson3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>tools.jackson.core</groupId>
+                <artifactId>jackson-databind</artifactId>
+                <version>${jackson3.version}</version>
+            </dependency>
+            <dependency>
+                <groupId>com.fasterxml.jackson.core</groupId>
+                <artifactId>jackson-annotations</artifactId>
+                <version>${jackson-annotations.version}</version>
             </dependency>
             <dependency>
                 <groupId>com.carrotsearch</groupId>
