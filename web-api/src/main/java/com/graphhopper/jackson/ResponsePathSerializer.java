@@ -18,13 +18,13 @@
 
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.databind.node.ArrayNode;
-import com.fasterxml.jackson.databind.node.JsonNodeFactory;
-import com.fasterxml.jackson.databind.node.ObjectNode;
 import com.graphhopper.GHResponse;
 import com.graphhopper.ResponsePath;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.PointList;
+import tools.jackson.databind.node.ArrayNode;
+import tools.jackson.databind.node.JsonNodeFactory;
+import tools.jackson.databind.node.ObjectNode;
 
 import java.text.NumberFormat;
 import java.util.Arrays;
@@ -41,6 +41,7 @@ import java.util.Locale;
  *
  * @author Peter Karich
  */
+// ORS-GH MOD - ported to Jackson 3
 public class ResponsePathSerializer {
 
     /**

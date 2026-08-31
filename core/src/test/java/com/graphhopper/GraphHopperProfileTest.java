@@ -18,15 +18,15 @@
 
 package com.graphhopper;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.config.CHProfile;
 import com.graphhopper.config.LMProfile;
 import com.graphhopper.config.Profile;
 import com.graphhopper.jackson.Jackson;
 import com.graphhopper.routing.util.CarFlagEncoder;
 import org.junit.jupiter.api.Test;
+// ORS-GH MOD - ported to Jackson 3
+import tools.jackson.databind.json.JsonMapper;
 
-import java.io.IOException;
 import java.util.Arrays;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -36,8 +36,8 @@ public class GraphHopperProfileTest {
     private static final String GH_LOCATION = "target/gh-profile-config-gh";
 
     @Test
-    public void deserialize() throws IOException {
-        ObjectMapper objectMapper = Jackson.newObjectMapper();
+    public void deserialize() {
+        JsonMapper objectMapper = Jackson.newObjectMapper();
         String json = "{\"name\":\"my_car\",\"vehicle\":\"car\",\"weighting\":\"fastest\",\"turn_costs\":true,\"foo\":\"bar\",\"baz\":\"buzz\"}";
         Profile profile = objectMapper.readValue(json, Profile.class);
         assertEquals("my_car", profile.getName());

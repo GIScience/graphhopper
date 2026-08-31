@@ -17,10 +17,9 @@
  */
 package com.graphhopper.routing.lm;
 
-import com.bedatadriven.jackson.datatype.jts.JtsModule;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.graphhopper.GraphHopperConfig;
 import com.graphhopper.config.LMProfile;
+import com.graphhopper.jackson.geojson.GeoJsonMapper;
 import com.graphhopper.routing.util.AreaIndex;
 import com.graphhopper.storage.GraphHopperStorage;
 import com.graphhopper.storage.StorableProperties;
@@ -30,6 +29,8 @@ import com.graphhopper.util.JsonFeatureCollection;
 import com.graphhopper.util.Parameters.Landmark;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import tools.jackson.core.JacksonException;
+import tools.jackson.databind.json.JsonMapper;
 
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -272,8 +273,9 @@ public class LMPreparationHandler {
     // ORS-GH MOD END
 
     private JsonFeatureCollection loadLandmarkSplittingFeatureCollection(String splitAreaLocation) {
-        ObjectMapper objectMapper = new ObjectMapper();
-        objectMapper.registerModule(new JtsModule());
+        // ORS-GH MOD START use the Jackson 3 GeoJsonMapper instead of a Jackson 2 ObjectMapper + JtsModule
+        JsonMapper objectMapper = GeoJsonMapper.newObjectMapper();
+        // ORS-GH MOD END
         URL builtinSplittingFile = LandmarkStorage.class.getResource("map.geo.json");
         try (Reader reader = splitAreaLocation.isEmpty() ?
                 new InputStreamReader(builtinSplittingFile.openStream(), UTF_CS) :
@@ -285,7 +287,9 @@ public class LMPreparationHandler {
                 LOGGER.info("Loaded landmark splitting collection from {}", splitAreaLocation);
             }
             return result;
-        } catch (IOException e) {
+        // ORS-GH MOD START also catch JacksonException, which Jackson 3 no longer derives from IOException
+        } catch (IOException | JacksonException e) {
+        // ORS-GH MOD END
             LOGGER.error("Problem while reading border map GeoJSON. Skipping this.", e);
             return null;
         }

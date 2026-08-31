@@ -17,23 +17,24 @@
  */
 package com.graphhopper.jackson;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.graphhopper.util.Helper;
 import com.graphhopper.util.Instruction;
 import com.graphhopper.util.InstructionList;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-public class InstructionListSerializer extends JsonSerializer<InstructionList> {
+// ORS-GH MOD - ported to Jackson 3
+public class InstructionListSerializer extends ValueSerializer<InstructionList> {
     @Override
-    public void serialize(InstructionList instructions, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException {
+    public void serialize(InstructionList instructions, JsonGenerator jsonGenerator, SerializationContext serializationContext) throws JacksonException {
         List<Map<String, Object>> instrList = new ArrayList<>(instructions.size());
         int pointsIndex = 0;
         for (Instruction instruction : instructions) {
@@ -53,6 +54,6 @@ public class InstructionListSerializer extends JsonSerializer<InstructionList> {
             pointsIndex = tmpIndex;
 
         }
-        jsonGenerator.writeObject(instrList);
+        jsonGenerator.writePOJO(instrList);
     }
 }

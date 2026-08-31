@@ -17,18 +17,17 @@
  */
 package com.graphhopper.jackson;
 
-import com.fasterxml.jackson.core.JsonGenerator;
-import com.fasterxml.jackson.core.JsonProcessingException;
-import com.fasterxml.jackson.databind.JsonSerializer;
-import com.fasterxml.jackson.databind.SerializerProvider;
 import com.graphhopper.util.Helper;
 import org.locationtech.jts.geom.Envelope;
+import tools.jackson.core.JacksonException;
+import tools.jackson.core.JsonGenerator;
+import tools.jackson.databind.SerializationContext;
+import tools.jackson.databind.ValueSerializer;
 
-import java.io.IOException;
-
-class JtsEnvelopeSerializer extends JsonSerializer<Envelope> {
+// ORS-GH MOD - ported to Jackson 3
+class JtsEnvelopeSerializer extends ValueSerializer<Envelope> {
     @Override
-    public void serialize(Envelope bBox, JsonGenerator jsonGenerator, SerializerProvider serializerProvider) throws IOException, JsonProcessingException {
+    public void serialize(Envelope bBox, JsonGenerator jsonGenerator, SerializationContext serializationContext) throws JacksonException {
         jsonGenerator.writeStartArray();
         jsonGenerator.writeNumber(Helper.round6(bBox.getMinX()));
         jsonGenerator.writeNumber(Helper.round6(bBox.getMinY()));
