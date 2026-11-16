@@ -160,4 +160,54 @@ public class ExpressionVisitorTest {
                         lookup, ""));
         assertTrue(ret.getMessage().startsWith("[HERE] invalid expression \"edge.fetchWayGeometry().size() > 2\": size is illegal method"), ret.getMessage());
     }
+
+    @Test
+    public void conditionIsBuiltFromTheParsedExpression() {
+        ExpressionVisitor.NameValidator validVariable = s -> isValidVariableName(s)
+                || Helper.toUpperCase(s).equals(s) || s.equals("road_class") || s.equals("country");
+
+        // line breaks, tabs and unicode escapes shift the column numbers Janino reports, so the enum, string and area
+        // replacements must not be spliced into the original text by column (GHSA-mg8w-mq9r-f9c6)
+        for (String sep : Arrays.asList("\n", "\r", "\r\n", "\t", "\\u000a")) {
+            assertEquals("country == 1 || road_class == RoadClass.PRIMARY",
+                    parseExpression("country ==" + sep + "\"DEU\" || road_class == PRIMARY", validVariable, lookup).converted.toString(), sep);
+            assertEquals("country == 1 || " + CustomWeightingHelper.class.getSimpleName() + ".in(this.in_custom_1, edge)",
+                    parseExpression("country ==" + sep + "\"DEU\" || in_custom_1", validVariable, lookup).converted.toString(), sep);
+        }
+
+        // the content of a string literal stays inside the literal and is never parsed as code
+        assertEquals("country == -1", parseExpression("country == \"; x(); \"", validVariable, lookup).converted.toString());
+        assertEquals("country == -1", parseExpression("country ==\n\"; x(); \"", validVariable, lookup).converted.toString());
+    }
+
+    @Test
+    public void onlySimpleOperatorsAndCheckedArguments() {
+        ExpressionVisitor.NameValidator validVariable = s -> isValidVariableName(s)
+                || Helper.toUpperCase(s).equals(s) || s.equals("road_class");
+
+        // bitwise and shift operators are not needed in a condition and are rejected
+        for (String expression : Arrays.asList("road_class.ordinal() & 1", "road_class.ordinal() | 1",
+                "road_class.ordinal() ^ 1", "road_class.ordinal() << 1", "road_class.ordinal() >> 1")) {
+            ExpressionVisitor.ParseResult result = parseExpression(expression, validVariable, lookup);
+            assertFalse(result.ok, expression);
+            assertNull(result.converted, expression);
+        }
+        assertEquals("operator & not allowed", parseExpression("road_class.ordinal() & 1", validVariable, lookup).invalidMessage);
+
+        // negated values stay valid and two unary minus must not become the decrement operator
+        assertTrue(parseExpression("Math.sqrt(-2)", validVariable, lookup).ok);
+        assertEquals("- -road_class.ordinal() > -2",
+                parseExpression("- -road_class.ordinal() > -2", validVariable, lookup).converted.toString());
+        assertEquals("!!edge.getDistance()", parseExpression("! !edge.getDistance()", validVariable, lookup).converted.toString());
+
+        // method arguments are checked like any other part of the expression
+        assertFalse(parseExpression("Math.sqrt(System.currentTimeMillis())", validVariable, lookup).ok);
+        assertFalse(parseExpression("Math.sqrt(new Object().hashCode())", validVariable, lookup).ok);
+        assertTrue(parseExpression("Math.sqrt(road_class.ordinal())", validVariable, lookup).ok);
+
+        // a rejected expression never leaves a partially converted expression behind
+        ExpressionVisitor.ParseResult result = parseExpression("road_class == PRIMARY && edge.blup()", validVariable, lookup);
+        assertFalse(result.ok);
+        assertNull(result.converted);
+    }
 }
