@@ -205,7 +205,8 @@ class ExpressionVisitor {
     static ParseResult parseExpression(String expression, NameValidator validator, EncodedValueLookup lookup) {
         ParseResult result = new ParseResult();
         try {
-            Parser parser = new Parser(new Scanner("ignore", new StringReader(expression)));
+            // no file name => the message starts with "Line 1, Column 7: ..." instead of naming a pseudo file
+            Parser parser = new Parser(new Scanner(null, new StringReader(expression)));
             Java.Atom atom = parser.parseConditionalExpression();
             // after parsing the expression the input should end (otherwise it is not "simple")
             if (parser.peek().type == TokenType.END_OF_INPUT) {
