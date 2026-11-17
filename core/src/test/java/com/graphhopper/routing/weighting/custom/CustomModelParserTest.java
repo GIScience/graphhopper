@@ -75,6 +75,27 @@ class CustomModelParserTest {
         assertEquals(1.0, priorityMapping.get(edge2, false), 1.e-6);
     }
 
+    // ORS-GH MOD START - regression test for GHSA-mg8w-mq9r-f9c6 (upstream has the same test), keep it
+    @Test
+    void multiLineCondition() {
+        // a condition spanning several lines must compile and evaluate: the generated code is built from the parsed
+        // expression, it is no longer spliced into the original text by line-local column numbers
+        CustomModel customModel = new CustomModel();
+        customModel.addToPriority(If("road_class ==\nPRIMARY ||\n\troad_class == SECONDARY", MULTIPLY, 0.5));
+        CustomWeighting.EdgeToDoubleMapping priorityMapping = CustomModelParser.createWeightingParameters(customModel, encodingManager,
+                avgSpeedEnc, encoder.getMaxSpeed(), null).getEdgeToPriorityMapping();
+
+        GraphHopperStorage graph = new GraphBuilder(encodingManager).create();
+        EdgeIteratorState edge1 = graph.edge(0, 1).setDistance(100).set(roadClassEnc, RoadClass.PRIMARY);
+        EdgeIteratorState edge2 = graph.edge(1, 2).setDistance(100).set(roadClassEnc, RoadClass.SECONDARY);
+        EdgeIteratorState edge3 = graph.edge(2, 3).setDistance(100).set(roadClassEnc, RoadClass.TERTIARY);
+
+        assertEquals(0.5, priorityMapping.get(edge1, false), 1.e-6);
+        assertEquals(0.5, priorityMapping.get(edge2, false), 1.e-6);
+        assertEquals(1.0, priorityMapping.get(edge3, false), 1.e-6);
+    }
+    // ORS-GH MOD END
+
     @Test
     void testPriority() {
         EdgeIteratorState primary = graph.edge(0, 1).setDistance(10).
