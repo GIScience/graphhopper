@@ -161,6 +161,7 @@ public class ExpressionVisitorTest {
         assertTrue(ret.getMessage().startsWith("[HERE] invalid expression \"edge.fetchWayGeometry().size() > 2\": size is illegal method"), ret.getMessage());
     }
 
+    // ORS-GH MOD START - regression tests for GHSA-mg8w-mq9r-f9c6, keep them when merging upstream test changes
     @Test
     public void conditionIsBuiltFromTheParsedExpression() {
         ExpressionVisitor.NameValidator validVariable = s -> isValidVariableName(s)
@@ -210,4 +211,5 @@ public class ExpressionVisitorTest {
         assertFalse(result.ok);
         assertNull(result.converted);
     }
+    // ORS-GH MOD END
 }

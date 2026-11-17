@@ -75,6 +75,7 @@ class CustomModelParserTest {
         assertEquals(1.0, priorityMapping.get(edge2, false), 1.e-6);
     }
 
+    // ORS-GH MOD START - regression test for GHSA-mg8w-mq9r-f9c6 (upstream has the same test), keep it
     @Test
     void multiLineCondition() {
         // a condition spanning several lines must compile and evaluate: the generated code is built from the parsed
@@ -93,6 +94,7 @@ class CustomModelParserTest {
         assertEquals(0.5, priorityMapping.get(edge2, false), 1.e-6);
         assertEquals(1.0, priorityMapping.get(edge3, false), 1.e-6);
     }
+    // ORS-GH MOD END
 
     @Test
     void testPriority() {

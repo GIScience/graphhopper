@@ -37,9 +37,12 @@ import static com.graphhopper.routing.weighting.custom.CustomModelParser.IN_AREA
  * input after tabs or unicode escapes, so text replacements based on them could move user text out of a string
  * literal and into the compiled code (GHSA-mg8w-mq9r-f9c6, reimplements the upstream fix 4c0e5bda8).
  */
+// ORS-GH MOD - class rewritten against GHSA-mg8w-mq9r-f9c6, see the javadoc above. The invariant to keep when
+// merging upstream code into this file: the converted condition is generated from the parsed expression and must
+// never again be assembled by copying the user text at Janino column numbers.
 class ExpressionVisitor {
 
-    // operators are written as fixed strings, never copied from the user text
+    // ORS-GH MOD - operators are written as fixed strings, never copied from the user text
     private static final Set<String> allowedBinaryOps = new HashSet<>(Arrays.asList(
             "==", "!=", "<", ">", "<=", ">=", "&&", "||", "*", "+", "-", "/", "%"));
     private static final String HELPER = CustomWeightingHelper.class.getSimpleName();
@@ -66,6 +69,9 @@ class ExpressionVisitor {
         return false;
     }
 
+    // ORS-GH MOD START - security fix GHSA-mg8w-mq9r-f9c6: these methods replace the visitRvalue/Replacement pair
+    // that validated the condition and then patched the original text by position. Every branch returns the code it
+    // allows and throws otherwise, so nothing unchecked can reach the compiler.
     /**
      * Checks rv against the allow list and returns the Java code for it. Throws for anything not allowed, so nothing
      * unexpected can reach the compiler.
@@ -197,6 +203,7 @@ class ExpressionVisitor {
             return ((Java.AmbiguousName) rv).identifiers[0];
         return null;
     }
+    // ORS-GH MOD END
 
     static void parseExpressions(StringBuilder expressions, NameValidator nameInConditionValidator, String exceptionInfo,
                                  Set<String> createObjects, List<Statement> list, EncodedValueLookup lookup, String lastStmt) {
@@ -232,6 +239,8 @@ class ExpressionVisitor {
      */
     static ParseResult parseExpression(String expression, NameValidator validator, EncodedValueLookup lookup) {
         ParseResult result = new ParseResult();
+        // ORS-GH MOD START - security fix GHSA-mg8w-mq9r-f9c6: emit the condition from the parsed expression and
+        // fail closed. Do not restore the TreeMap<Integer, Replacement> splicing that used to build "converted".
         try {
             // no file name => the message starts with "Line 1, Column 7: ..." instead of naming a pseudo file
             Parser parser = new Parser(new Scanner(null, new StringReader(expression)));
@@ -252,6 +261,7 @@ class ExpressionVisitor {
             result.converted = null;
             result.invalidMessage = ex.getMessage();
         }
+        // ORS-GH MOD END
         return result;
     }
 
