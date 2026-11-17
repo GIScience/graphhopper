@@ -237,15 +237,15 @@ class ExpressionVisitor {
             Parser parser = new Parser(new Scanner(null, new StringReader(expression)));
             Java.Atom atom = parser.parseConditionalExpression();
             // after parsing the expression the input should end (otherwise it is not "simple")
-            if (parser.peek().type == TokenType.END_OF_INPUT) {
-                result.guessedVariables = new LinkedHashSet<>();
-                ExpressionVisitor visitor = new ExpressionVisitor(result, validator, lookup);
-                Java.Rvalue rvalue = atom.toRvalue();
-                if (rvalue == null)
-                    throw new IllegalArgumentException("invalid expression " + atom);
-                result.converted = new StringBuilder(visitor.emit(rvalue));
-                result.ok = true;
-            }
+            if (parser.peek().type != TokenType.END_OF_INPUT)
+                throw new IllegalArgumentException("expression is not simple");
+            result.guessedVariables = new LinkedHashSet<>();
+            ExpressionVisitor visitor = new ExpressionVisitor(result, validator, lookup);
+            Java.Rvalue rvalue = atom.toRvalue();
+            if (rvalue == null)
+                throw new IllegalArgumentException("invalid expression " + atom);
+            result.converted = new StringBuilder(visitor.emit(rvalue));
+            result.ok = true;
         } catch (Exception ex) {
             // fail closed: never leave a partially built "converted" that could reach the compiler
             result.ok = false;
