@@ -108,7 +108,7 @@ class ExpressionVisitor {
         try {
             new DefaultEncodedValueFactory().create(arg);
             knownEncodedValue = true;
-        } catch (Exception ex) {
+        } catch (Exception _) {
             knownEncodedValue = false;
         }
         throw new IllegalArgumentException(knownEncodedValue
@@ -137,37 +137,65 @@ class ExpressionVisitor {
     private String emitBinaryOperation(Java.BinaryOperation binOp) {
         if (!allowedBinaryOps.contains(binOp.operator))
             throw new IllegalArgumentException("operator " + binOp.operator + " not allowed");
-        boolean eqOps = binOp.operator.equals("==") || binOp.operator.equals("!=");
         String lh = emit(binOp.lhs);
-        String rh = null;
-        if (binOp.lhs instanceof Java.AmbiguousName && ((Java.AmbiguousName) binOp.lhs).identifiers.length == 1) {
-            String lhVarAsString = ((Java.AmbiguousName) binOp.lhs).identifiers[0];
-            if (binOp.rhs instanceof Java.StringLiteral) {
-                // replace String with its index for faster comparison (?) and skipping the Map<String, Integer> lookup at runtime
-                if (lookup.hasEncodedValue(lhVarAsString)) {
-                    if (!eqOps)
-                        throw new IllegalArgumentException("Operator " + binOp.operator + " not allowed for String");
-                    StringEncodedValue ev = lookup.getStringEncodedValue(lhVarAsString);
-                    String str = ((Java.StringLiteral) binOp.rhs).value;
-                    int integ = ev.indexOf(str.substring(1, str.length() - 1));
-                    if (integ == 0) integ = -1; // 0 means not found and this should always trigger inequality
-                    rh = "" + integ;
-                }
-            } else if (binOp.rhs instanceof Java.AmbiguousName && ((Java.AmbiguousName) binOp.rhs).identifiers.length == 1) {
-                // Make enum explicit as NO or OTHER can occur in other enums so convert "toll == NO" to "toll == Toll.NO"
-                String rhValueAsString = ((Java.AmbiguousName) binOp.rhs).identifiers[0];
-                if (nameValidator.isValid(lhVarAsString) && Helper.toUpperCase(rhValueAsString).equals(rhValueAsString)) {
-                    if (!eqOps)
-                        throw new IllegalArgumentException("Operator " + binOp.operator + " not allowed for enum");
-                    // validates the enum value
-                    emit(binOp.rhs);
-                    rh = toEncodedValueClassName(lhVarAsString) + "." + rhValueAsString;
-                }
-            }
-        }
+        String rh = emitRewrittenRightHandSide(binOp);
         if (rh == null)
             rh = emit(binOp.rhs);
         return lh + " " + binOp.operator + " " + rh;
+    }
+
+    /**
+     * The two conversions of the right hand side that depend on the left hand side. Returns null if neither applies
+     * and the right hand side should be emitted like any other expression.
+     */
+    private String emitRewrittenRightHandSide(Java.BinaryOperation binOp) {
+        String lhVarAsString = singleIdentifier(binOp.lhs);
+        if (lhVarAsString == null)
+            return null;
+        if (binOp.rhs instanceof Java.StringLiteral)
+            return emitStringAsIndex(binOp, lhVarAsString);
+        String rhValueAsString = singleIdentifier(binOp.rhs);
+        return rhValueAsString == null ? null : emitQualifiedEnumConstant(binOp, lhVarAsString, rhValueAsString);
+    }
+
+    /**
+     * Replace String with its index for faster comparison (?) and skipping the Map&lt;String, Integer&gt; lookup at
+     * runtime.
+     */
+    private String emitStringAsIndex(Java.BinaryOperation binOp, String lhVarAsString) {
+        if (!lookup.hasEncodedValue(lhVarAsString))
+            return null;
+        requireEqualityOperator(binOp, "String");
+        StringEncodedValue ev = lookup.getStringEncodedValue(lhVarAsString);
+        String str = ((Java.StringLiteral) binOp.rhs).value;
+        int integ = ev.indexOf(str.substring(1, str.length() - 1));
+        if (integ == 0) integ = -1; // 0 means not found and this should always trigger inequality
+        return "" + integ;
+    }
+
+    /**
+     * Make enum explicit as NO or OTHER can occur in other enums so convert "toll == NO" to "toll == Toll.NO".
+     */
+    private String emitQualifiedEnumConstant(Java.BinaryOperation binOp, String lhVarAsString, String rhValueAsString) {
+        if (!nameValidator.isValid(lhVarAsString) || !Helper.toUpperCase(rhValueAsString).equals(rhValueAsString))
+            return null;
+        requireEqualityOperator(binOp, "enum");
+        emit(binOp.rhs); // validates the enum value
+        return toEncodedValueClassName(lhVarAsString) + "." + rhValueAsString;
+    }
+
+    private void requireEqualityOperator(Java.BinaryOperation binOp, String comparedType) {
+        if (!binOp.operator.equals("==") && !binOp.operator.equals("!="))
+            throw new IllegalArgumentException("Operator " + binOp.operator + " not allowed for " + comparedType);
+    }
+
+    /**
+     * The identifier of a simple name like road_class, null for anything else.
+     */
+    private static String singleIdentifier(Java.Rvalue rv) {
+        if (rv instanceof Java.AmbiguousName && ((Java.AmbiguousName) rv).identifiers.length == 1)
+            return ((Java.AmbiguousName) rv).identifiers[0];
+        return null;
     }
 
     static void parseExpressions(StringBuilder expressions, NameValidator nameInConditionValidator, String exceptionInfo,
